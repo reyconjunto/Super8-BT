@@ -1,0 +1,421 @@
+// Main Application Logic
+const App = {
+    state: {
+        players: [],
+        format: null, // 'individual' or 'fixed'
+        numPlayers: 8,
+        fixedPairs: [], 
+        tournament: null, 
+        stats: {} 
+    },
+
+    init: () => {
+        App.bindEvents();
+    },
+
+    bindEvents: () => {
+        // Format Setup
+        document.getElementById('format-individual').addEventListener('click', () => App.selectFormat('individual'));
+        document.getElementById('format-fixed').addEventListener('click', () => App.selectFormat('fixed'));
+        document.getElementById('btn-next-to-players').addEventListener('click', App.goToPlayersScreen);
+
+        // Players setup
+        document.getElementById('btn-back-to-format').addEventListener('click', () => App.switchScreen('setup-format-screen'));
+        document.getElementById('players-list').addEventListener('input', App.validatePlayers);
+        document.getElementById('players-list').addEventListener('click', App.toggleSeed);
+        document.getElementById('btn-next-to-pairs').addEventListener('click', App.processPlayers);
+
+        // Pairs Setup (Only Fixed Doubles)
+        document.getElementById('btn-back-to-players').addEventListener('click', () => App.switchScreen('setup-players-screen'));
+        document.getElementById('btn-draw-random').addEventListener('click', App.drawFixedPairs);
+        document.getElementById('btn-manual-pairs').addEventListener('click', App.setupManualPairs);
+        
+        // Start Fixed
+        document.getElementById('btn-start-fixed').addEventListener('click', App.startTournament);
+
+        // Tabs
+        document.querySelectorAll('.tab').forEach(t => {
+            t.addEventListener('click', (e) => App.switchTab(e.target.dataset.target));
+        });
+    },
+
+    // --- UI Navigation ---
+    switchScreen: (screenId) => {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(screenId).classList.add('active');
+    },
+
+    switchTab: (tabId) => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.querySelector(`[data-target="${tabId}"]`).classList.add('active');
+        document.getElementById(tabId).classList.add('active');
+        
+        if (tabId === 'tab-ranking') {
+            App.renderRanking();
+        }
+    },
+
+    // --- FORMAT SELECTION ---
+    selectFormat: (formatType) => {
+        App.state.format = formatType;
+        App.state.numPlayers = formatType === 'individual' ? 8 : 16;
+        
+        document.querySelectorAll('.format-card').forEach(c => c.classList.remove('selected'));
+        document.getElementById(`format-${formatType}`).classList.add('selected');
+        
+        document.getElementById('btn-next-to-players').disabled = false;
+    },
+
+    goToPlayersScreen: () => {
+        // Re-render inputs in case format changed
+        App.renderPlayerInputs();
+        App.validatePlayers();
+        
+        document.getElementById('players-title').innerText = App.state.format === 'individual' ? 'Elenco (8 Jogadores)' : 'Elenco (16 Jogadores)';
+        App.switchScreen('setup-players-screen');
+    },
+
+    // --- PLAYERS SETUP ---
+    renderPlayerInputs: () => {
+        const container = document.getElementById('players-list');
+        container.innerHTML = '';
+        for(let i=0; i<App.state.numPlayers; i++) {
+            container.innerHTML += `
+                <div class="player-input-row">
+                    <span class="player-num">${i+1}.</span>
+                    <input type="text" class="p-input" data-index="${i}" placeholder="Nome do Jogador ${i+1}">
+                    <button class="seed-toggle" data-index="${i}" title="Marcar como Cabeça de Chave">⭐</button>
+                </div>
+            `;
+        }
+    },
+
+    toggleSeed: (e) => {
+        if(e.target.classList.contains('seed-toggle')) {
+            e.target.classList.toggle('is-seed');
+        }
+    },
+
+    validatePlayers: () => {
+        const inputs = document.querySelectorAll('.p-input');
+        let allFilled = true;
+        inputs.forEach(inp => {
+            if (inp.value.trim() === '') allFilled = false;
+        });
+
+        document.getElementById('btn-next-to-pairs').disabled = !allFilled;
+    },
+
+    processPlayers: () => {
+        // Collect players
+        const inputs = document.querySelectorAll('.p-input');
+        const toggles = document.querySelectorAll('.seed-toggle');
+        
+        App.state.players = [];
+        for(let i=0; i<App.state.numPlayers; i++) {
+            App.state.players.push({
+                id: `p_${i}`,
+                name: inputs[i].value.trim(),
+                isSeed: toggles[i].classList.contains('is-seed')
+            });
+        }
+        
+        const numSeeds = App.state.players.filter(p=>p.isSeed).length;
+        // Limit seeds: up to numPlayers / 2
+        const maxSeeds = App.state.numPlayers / 2;
+        if (numSeeds > maxSeeds) {
+            document.getElementById('setup-error').innerText = `Max de ${maxSeeds} Cabeças de chave permitido.`;
+            return;
+        }
+        document.getElementById('setup-error').innerText = "";
+        
+        if (App.state.format === 'individual') {
+            // Ir direto para torneio
+            App.startTournament();
+        } else {
+            // Ir para tela de duplas
+            document.getElementById('doubles-preview').innerHTML = '';
+            document.getElementById('btn-start-fixed').classList.add('hidden');
+            App.switchScreen('setup-pairs-screen');
+        }
+    },
+
+    // --- PAIRS SETUP ---
+    drawFixedPairs: () => {
+        App.state.fixedPairs = FixedDoubles.drawPairs(App.state.players);
+        App.renderFixedPairsPreview(true);
+        document.getElementById('btn-start-fixed').classList.remove('hidden');
+    },
+
+    setupManualPairs: () => {
+        const numPairs = App.state.numPlayers / 2;
+        const container = document.getElementById('doubles-preview');
+        container.innerHTML = '<p style="margin-bottom:10px;">Selecione os pares (garanta que não haja repetidos):</p>';
+        
+        let selectHtml = `<select class="pair-select player-select">
+            <option value="">Escolha...</option>
+            ${App.state.players.map(p => `<option value="${p.id}">${p.name}${p.isSeed?'⭐':''}</option>`).join('')}
+        </select>`;
+
+        for (let i=0; i<numPairs; i++) {
+            container.innerHTML += `
+               <div class="pair-row">
+                    ${selectHtml} 
+                    <span class="vs">&</span> 
+                    ${selectHtml}
+               </div> 
+            `;
+        }
+        
+        const confirmBtn = document.createElement('button');
+        confirmBtn.className = 'btn btn-primary mt-4';
+        confirmBtn.innerText = 'Confirmar Duplas Manuais';
+        confirmBtn.onclick = App.confirmManualPairs;
+        container.appendChild(confirmBtn);
+        
+        document.getElementById('btn-start-fixed').classList.add('hidden');
+    },
+
+    confirmManualPairs: () => {
+        const numPairs = App.state.numPlayers / 2;
+        const selects = document.querySelectorAll('.player-select');
+        let selectedIds = [];
+        let valid = true;
+
+        selects.forEach(sel => {
+            if(!sel.value) valid = false;
+            selectedIds.push(sel.value);
+        });
+
+        // Check for duplicates
+        if (new Set(selectedIds).size !== App.state.numPlayers) {
+            alert("Existem jogadores repetidos ou não selecionados.");
+            return;
+        }
+
+        if(!valid) return;
+
+        App.state.fixedPairs = [];
+        for (let i=0; i<numPairs; i++) {
+            let p1Id = selects[i*2].value;
+            let p2Id = selects[i*2+1].value;
+            let p1 = App.state.players.find(x => x.id === p1Id);
+            let p2 = App.state.players.find(x => x.id === p2Id);
+            
+            App.state.fixedPairs.push({
+                id: `pair_${i}`,
+                name: `${p1.name} & ${p2.name}`,
+                p1: p1,
+                p2: p2
+            });
+        }
+
+        App.renderFixedPairsPreview(false);
+        document.getElementById('btn-start-fixed').classList.remove('hidden');
+    },
+
+    renderFixedPairsPreview: (drawn) => {
+        const container = document.getElementById('doubles-preview');
+        container.innerHTML = drawn ? '<p>👉 Duplas Sorteadas!</p>' : '<p>👉 Duplas Confirmadas!</p>';
+        App.state.fixedPairs.forEach(pair => {
+            container.innerHTML += `
+                <div class="pair-row">
+                    <span>${pair.p1.name} ${pair.p1.isSeed?'⭐':''}</span>
+                    <span class="vs">&</span>
+                    <span>${pair.p2.name} ${pair.p2.isSeed?'⭐':''}</span>
+                </div>
+            `;
+        });
+    },
+
+    // --- TOURNAMENT START ---
+    startTournament: () => {
+        App.initStats();
+
+        if (App.state.format === 'individual') {
+            App.state.tournament = IndividualMode.generateRounds(App.state.players);
+            document.getElementById('rank-name-col').innerText = 'Jogador';
+        } else {
+            App.state.tournament = RoundRobin.generateSubArrays(App.state.fixedPairs);
+            document.getElementById('rank-name-col').innerText = 'Dupla';
+        }
+
+        App.renderRounds();
+        App.renderRanking();
+        App.switchScreen('tournament-screen');
+    },
+
+    initStats: () => {
+        App.state.stats = {};
+        if (App.state.format === 'individual') {
+            App.state.players.forEach(p => {
+                App.state.stats[p.id] = { obj: p, pts: 0, sg: 0, pro: 0 };
+            });
+        } else {
+            App.state.fixedPairs.forEach(p => {
+                App.state.stats[p.id] = { obj: p, pts: 0, sg: 0, pro: 0 };
+            });
+        }
+    },
+
+    // --- MATCHES RENDER ---
+    renderRounds: () => {
+        const container = document.getElementById('rounds-container');
+        container.innerHTML = '';
+
+        App.state.tournament.rounds.forEach(round => {
+            let matchesHtml = round.matches.map(match => {
+                let t1Name = '';
+                let t2Name = '';
+                
+                if (App.state.format === 'individual') {
+                    t1Name = `${match.t1[0].name} & ${match.t1[1].name}`;
+                    t2Name = `${match.t2[0].name} & ${match.t2[1].name}`;
+                } else {
+                    t1Name = match.t1.name;
+                    t2Name = match.t2.name;
+                }
+
+                return `
+                    <div class="match-card" id="${match.id}">
+                        <div class="match-teams">
+                            <div class="team"><span>${t1Name}</span></div>
+                            <div class="vs-badge">VS</div>
+                            <div class="team"><span>${t2Name}</span></div>
+                        </div>
+                        <div class="match-score">
+                            <input type="number" min="0" class="score-input s-out" data-mid="${match.id}" data-team="1" ${match.finished ? 'disabled' : ''} value="${match.score1 !== null ? match.score1 : ''}">
+                            <span class="vs">X</span>
+                            <input type="number" min="0" class="score-input s-out" data-mid="${match.id}" data-team="2" ${match.finished ? 'disabled' : ''} value="${match.score2 !== null ? match.score2 : ''}">
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const allFinished = round.matches.length > 0 && round.matches.every(m => m.finished);
+
+            container.innerHTML += `
+               <div class="round-block">
+                    <div class="round-header">
+                        <h3>Rodada ${round.roundNum}</h3>
+                        ${allFinished 
+                            ? `<button class="btn-edit-round btn-secondary" data-rn="${round.roundNum}" style="padding:5px 12px;font-size:0.8rem;width:auto;">✏️ Editar</button>`
+                            : `<button class="btn-finish-round" data-rn="${round.roundNum}">Salvar Rodada</button>`
+                        }
+                    </div>
+                    ${matchesHtml}
+               </div> 
+            `;
+        });
+
+        document.querySelectorAll('.btn-finish-round').forEach(btn => {
+            btn.addEventListener('click', (e) => App.finishRound(parseInt(e.target.dataset.rn)));
+        });
+        document.querySelectorAll('.btn-edit-round').forEach(btn => {
+            btn.addEventListener('click', (e) => App.editRound(parseInt(e.target.dataset.rn)));
+        });
+    },
+
+    finishRound: (roundNum) => {
+        const round = App.state.tournament.rounds.find(r => r.roundNum === roundNum);
+        let error = false;
+
+        round.matches.forEach(match => {
+            if(match.finished) return;
+
+            const input1 = document.querySelector(`.score-input[data-mid="${match.id}"][data-team="1"]`);
+            const input2 = document.querySelector(`.score-input[data-mid="${match.id}"][data-team="2"]`);
+            
+            const s1 = parseInt(input1.value);
+            const s2 = parseInt(input2.value);
+
+            if (isNaN(s1) || isNaN(s2)) {
+                error = true;
+            } else {
+                match.score1 = s1;
+                match.score2 = s2;
+                match.finished = true;
+                
+                const res = Scoring.calculateMatchScore(s1, s2);
+                
+                if (App.state.format === 'individual') {
+                    App.addStatsToPlayer(match.t1[0].id, res.ptsA, res.sgA, res.proA);
+                    App.addStatsToPlayer(match.t1[1].id, res.ptsA, res.sgA, res.proA);
+                    App.addStatsToPlayer(match.t2[0].id, res.ptsB, res.sgB, res.proB);
+                    App.addStatsToPlayer(match.t2[1].id, res.ptsB, res.sgB, res.proB);
+                } else {
+                    App.addStatsToPlayer(match.t1.id, res.ptsA, res.sgA, res.proA);
+                    App.addStatsToPlayer(match.t2.id, res.ptsB, res.sgB, res.proB);
+                }
+            }
+        });
+
+        if (error) {
+            alert("Preencha todos os placares da rodada para salvá-la.");
+            return;
+        }
+
+        App.renderRounds(); 
+        App.switchTab('tab-ranking');
+    },
+
+    editRound: (roundNum) => {
+        const round = App.state.tournament.rounds.find(r => r.roundNum === roundNum);
+        
+        round.matches.forEach(match => {
+            if(!match.finished) return;
+            
+            // Subtrai os stats salvos anteriormente
+            const res = Scoring.calculateMatchScore(match.score1, match.score2);
+            
+            if (App.state.format === 'individual') {
+                App.addStatsToPlayer(match.t1[0].id, -res.ptsA, -res.sgA, -res.proA);
+                App.addStatsToPlayer(match.t1[1].id, -res.ptsA, -res.sgA, -res.proA);
+                App.addStatsToPlayer(match.t2[0].id, -res.ptsB, -res.sgB, -res.proB);
+                App.addStatsToPlayer(match.t2[1].id, -res.ptsB, -res.sgB, -res.proB);
+            } else {
+                App.addStatsToPlayer(match.t1.id, -res.ptsA, -res.sgA, -res.proA);
+                App.addStatsToPlayer(match.t2.id, -res.ptsB, -res.sgB, -res.proB);
+            }
+            
+            match.finished = false;
+        });
+        
+        App.renderRounds();
+        App.renderRanking();
+    },
+
+    addStatsToPlayer: (id, pts, sg, pro) => {
+        if (!App.state.stats[id]) return;
+        App.state.stats[id].pts += pts;
+        App.state.stats[id].sg += sg;
+        App.state.stats[id].pro += pro;
+    },
+
+    // --- RANKING ---
+    renderRanking: () => {
+        let statsArray = Object.values(App.state.stats);
+        statsArray = Scoring.sortRanking(statsArray);
+
+        const tbody = document.getElementById('ranking-body');
+        tbody.innerHTML = '';
+
+        statsArray.forEach((stat, index) => {
+            let medal = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : ''));
+            tbody.innerHTML += `
+               <tr>
+                    <td>${index + 1}</td>
+                    <td class="player-name">${stat.obj.name} <span class="medal">${medal}</span></td>
+                    <td><strong>${stat.pts}</strong></td>
+                    <td>${stat.sg}</td>
+                    <td>${stat.pro}</td>
+               </tr> 
+            `;
+        });
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    App.init();
+});

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super 8 BT - Us Guris da Quarta</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="background-overlay"></div>
+    
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <h1 class="logo-text">SUPER 8 <span class="highlight">BT</span></h1>
+            <p class="subtitle">Beach, Brasa & Breja</p>
+        </header>
+
+        <!-- SCREEN 1: Format Setup -->
+        <section id="setup-format-screen" class="screen active">
+            <div class="glass-card">
+                <h2>Selecione o Formato</h2>
+                <p>O número de participantes depende do formato.</p>
+                
+                <div class="format-options">
+                    <div class="format-card" id="format-individual">
+                        <h3>🏆 Individual (8 Jogadores)</h3>
+                        <p>Rodízio total: Todos jogam com todos, trocando de dupla em cada jogo.</p>
+                    </div>
+                    
+                    <div class="format-card" id="format-fixed">
+                        <h3>👥 Duplas Fixas (16 Jogadores)</h3>
+                        <p>Round-Robin: Formam-se 8 duplas que jogarão Todos-contra-Todos.</p>
+                    </div>
+                </div>
+
+                <div class="actions mt-4">
+                    <button class="btn btn-primary" id="btn-next-to-players" disabled>Avançar para Elenco</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- SCREEN 2: Players Setup -->
+        <section id="setup-players-screen" class="screen">
+            <div class="glass-card">
+                <button class="btn btn-back" id="btn-back-to-format">← Formato</button>
+                <h2 id="players-title">Elenco</h2>
+                <p>Cadastre os jogadores. Marque a estrela ⭐ para sinalizar os <strong>Cabeças de Chave</strong>.</p>
+                
+                <div class="players-list" id="players-list">
+                    <!-- Gerado via JS (8 ou 16) -->
+                </div>
+                
+                <div class="actions">
+                    <button class="btn btn-primary" id="btn-next-to-pairs" disabled>Continuar</button>
+                    <p id="setup-error" class="error-msg"></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SCREEN 3: Pairs Setup (Apenas Duplas Fixas) -->
+        <section id="setup-pairs-screen" class="screen">
+            <div class="glass-card">
+                <button class="btn btn-back" id="btn-back-to-players">← Voltar</button>
+                <h2>Formação das 8 Duplas</h2>
+                
+                <div class="fixed-doubles-setup" id="fixed-doubles-setup">
+                    <div class="actions-row">
+                        <button class="btn btn-secondary" id="btn-draw-random">🎲 Sorteio (Separa Cabeças)</button>
+                        <button class="btn btn-secondary" id="btn-manual-pairs">✍️ Escolher Manualmente</button>
+                    </div>
+                    <div id="doubles-preview" class="doubles-preview"></div>
+                </div>
+
+                <div class="actions mt-4">
+                    <button class="btn btn-primary hidden" id="btn-start-fixed">Gerar Torneio 🔥</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- SCREEN 4: Tournament Dashboard -->
+        <section id="tournament-screen" class="screen">
+            <!-- Tabs Navigation -->
+            <div class="tournament-tabs">
+                <button class="tab active" data-target="tab-matches">Rodadas & Jogos</button>
+                <button class="tab" data-target="tab-ranking">Classificação</button>
+            </div>
+
+            <!-- Tab: Matches -->
+            <div id="tab-matches" class="tab-content active">
+                <div id="rounds-container">
+                    <!-- Gerado via JS -->
+                </div>
+            </div>
+
+            <!-- Tab: Ranking -->
+            <div id="tab-ranking" class="tab-content">
+                <div class="glass-card pd-0">
+                    <table class="ranking-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th id="rank-name-col">Jogador</th>
+                                <th>Pts</th>
+                                <th>SG</th>
+                                <th>Pró</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ranking-body">
+                            <!-- Gerado via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+        
+    </div>
+
+    <!-- Logic Modules -->
+    <script src="logic/utils.js"></script>
+    <script src="logic/individual_mode.js"></script>
+    <script src="logic/fixed_doubles.js"></script>
+    <script src="logic/round_robin.js"></script>
+    <script src="logic/scoring.js"></script>
+    <!-- Main UI App -->
+    <script src="app.js"></script>
+</body>
+</html>
