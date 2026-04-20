@@ -11,6 +11,37 @@ const App = {
 
     init: () => {
         App.bindEvents();
+        if (App.loadState()) {
+            if (App.state.tournament) {
+                App.resumeTournament();
+            }
+        }
+    },
+
+    saveState: () => {
+        localStorage.setItem('super8bt_state', JSON.stringify(App.state));
+    },
+
+    loadState: () => {
+        try {
+            const saved = localStorage.getItem('super8bt_state');
+            if (saved) {
+                App.state = JSON.parse(saved);
+                return true;
+            }
+        } catch(e) { console.error('Erro ao ler state', e); }
+        return false;
+    },
+
+    resumeTournament: () => {
+        if (App.state.format === 'individual') {
+            document.getElementById('rank-name-col').innerText = 'Jogador';
+        } else {
+            document.getElementById('rank-name-col').innerText = 'Dupla';
+        }
+        App.renderRounds();
+        App.renderRanking();
+        App.switchScreen('tournament-screen');
     },
 
     bindEvents: () => {
@@ -36,6 +67,14 @@ const App = {
         // Tabs
         document.querySelectorAll('.tab').forEach(t => {
             t.addEventListener('click', (e) => App.switchTab(e.target.dataset.target));
+        });
+
+        // Reset
+        document.getElementById('btn-reset-tournament').addEventListener('click', () => {
+            if (confirm("Tem certeza que deseja apagar os dados e o andamento deste torneio?")) {
+                localStorage.removeItem('super8bt_state');
+                location.reload();
+            }
         });
     },
 
@@ -241,6 +280,7 @@ const App = {
             document.getElementById('rank-name-col').innerText = 'Dupla';
         }
 
+        App.saveState();
         App.renderRounds();
         App.renderRanking();
         App.switchScreen('tournament-screen');
@@ -356,6 +396,7 @@ const App = {
             return;
         }
 
+        App.saveState();
         App.renderRounds(); 
         App.switchTab('tab-ranking');
     },
@@ -382,6 +423,7 @@ const App = {
             match.finished = false;
         });
         
+        App.saveState();
         App.renderRounds();
         App.renderRanking();
     },
