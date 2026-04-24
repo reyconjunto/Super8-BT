@@ -48,6 +48,7 @@ const App = {
         // Format Setup
         document.getElementById('format-individual').addEventListener('click', () => App.selectFormat('individual'));
         document.getElementById('format-fixed').addEventListener('click', () => App.selectFormat('fixed'));
+        document.getElementById('num-players-input').addEventListener('input', App.validateFormatSetup);
         document.getElementById('btn-next-to-players').addEventListener('click', App.goToPlayersScreen);
 
         // Players setup
@@ -98,20 +99,54 @@ const App = {
     // --- FORMAT SELECTION ---
     selectFormat: (formatType) => {
         App.state.format = formatType;
-        App.state.numPlayers = formatType === 'individual' ? 8 : 16;
         
         document.querySelectorAll('.format-card').forEach(c => c.classList.remove('selected'));
         document.getElementById(`format-${formatType}`).classList.add('selected');
         
-        document.getElementById('btn-next-to-players').disabled = false;
+        const numSetup = document.getElementById('num-players-setup');
+        const numInput = document.getElementById('num-players-input');
+        const numHint = document.getElementById('num-players-hint');
+        
+        numSetup.style.display = 'block';
+        
+        if (formatType === 'individual') {
+            numInput.value = 8;
+            numInput.step = 4;
+            numHint.innerText = '* Na modalidade individual, o número de atletas deve ser múltiplo de 4.';
+        } else {
+            numInput.value = 16;
+            numInput.step = 2;
+            numHint.innerText = '* Na modalidade de duplas fixas, o número deve ser par.';
+        }
+        
+        App.validateFormatSetup();
+    },
+
+    validateFormatSetup: () => {
+        const numInput = document.getElementById('num-players-input');
+        const val = parseInt(numInput.value);
+        const btn = document.getElementById('btn-next-to-players');
+        
+        if (App.state.format === 'individual') {
+            btn.disabled = isNaN(val) || val < 4 || val % 4 !== 0;
+        } else if (App.state.format === 'fixed') {
+            btn.disabled = isNaN(val) || val < 4 || val % 2 !== 0;
+        } else {
+            btn.disabled = true;
+        }
     },
 
     goToPlayersScreen: () => {
+        const numInput = document.getElementById('num-players-input');
+        App.state.numPlayers = parseInt(numInput.value);
+
         // Re-render inputs in case format changed
         App.renderPlayerInputs();
         App.validatePlayers();
         
-        document.getElementById('players-title').innerText = App.state.format === 'individual' ? 'Elenco (8 Jogadores)' : 'Elenco (16 Jogadores)';
+        document.getElementById('players-title').innerText = App.state.format === 'individual' 
+            ? `Elenco (${App.state.numPlayers} Jogadores)` 
+            : `Elenco (${App.state.numPlayers} Jogadores / ${App.state.numPlayers/2} Duplas)`;
         App.switchScreen('setup-players-screen');
     },
 

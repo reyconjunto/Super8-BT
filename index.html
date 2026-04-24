@@ -16,7 +16,7 @@
         <!-- Header -->
         <header class="app-header">
             <h1 class="logo-text">SUPER 8 <span class="highlight">BT</span></h1>
-            <p class="subtitle">Beach, Brasa & Breja</p>
+            <p class="subtitle">Organize seu torneio!</p>
         </header>
 
         <!-- SCREEN 1: Format Setup -->
@@ -27,18 +27,35 @@
                 
                 <div class="format-options">
                     <div class="format-card" id="format-individual">
-                        <h3>🏆 Individual (8 Jogadores)</h3>
+                        <h3>🏆 Individual</h3>
                         <p>Rodízio total: Todos jogam com todos, trocando de dupla em cada jogo.</p>
                     </div>
                     
                     <div class="format-card" id="format-fixed">
-                        <h3>👥 Duplas Fixas (16 Jogadores)</h3>
-                        <p>Round-Robin: Formam-se 8 duplas que jogarão Todos-contra-Todos.</p>
+                        <h3>👥 Duplas Fixas</h3>
+                        <p>Round-Robin: Formam-se duplas que jogarão Todos-contra-Todos.</p>
                     </div>
+                </div>
+
+                <div class="num-players-setup mt-4" id="num-players-setup" style="display: none; text-align: center; padding: 20px; background: rgba(0,0,0,0.2); border-radius: 12px; border: 1px solid var(--glass-border);">
+                    <label for="num-players-input" style="font-weight: 700; font-size: 1.2rem; display: block; margin-bottom: 15px; color: var(--sunset-yellow);">Quantidade de Atletas</label>
+                    <input type="number" id="num-players-input" class="large-number-input" value="8" min="4">
+                    <p id="num-players-hint" style="font-size: 0.9rem; margin-top: 15px; color: var(--sand-secondary);"></p>
                 </div>
 
                 <div class="actions mt-4">
                     <button class="btn btn-primary" id="btn-next-to-players" disabled>Avançar para Elenco</button>
+                </div>
+
+                <!-- Regras / Critérios de Desempate -->
+                <div class="rules-footer mt-4" style="text-align: left; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; font-size: 0.85rem; color: var(--sand-secondary);">
+                    <h4 style="color: var(--sunset-yellow); margin-bottom: 8px;">📋 Critérios de Vitória e Desempate</h4>
+                    <ol style="margin-left: 20px; line-height: 1.5;">
+                        <li><strong>Pontos:</strong> Cada vitória vale 1 ponto.</li>
+                        <li><strong>Saldo de Games (SG):</strong> Em caso de empate em pontos, a vantagem é de quem possui o maior saldo (Games Ganhos - Games Perdidos).</li>
+                        <li><strong>Confronto Direto:</strong> Usado caso o saldo seja igual (entre dois empatados).</li>
+                        <li><strong>Games Pró:</strong> Persistindo o empate, ganha quem fez mais games a favor ao longo do torneio.</li>
+                    </ol>
                 </div>
             </div>
         </section>
@@ -65,7 +82,7 @@
         <section id="setup-pairs-screen" class="screen">
             <div class="glass-card">
                 <button class="btn btn-back" id="btn-back-to-players">← Voltar</button>
-                <h2>Formação das 8 Duplas</h2>
+                <h2>Formação das Duplas</h2>
                 
                 <div class="fixed-doubles-setup" id="fixed-doubles-setup">
                     <div class="actions-row">

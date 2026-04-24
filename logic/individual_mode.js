@@ -14,34 +14,58 @@ const IndividualMode = {
     ],
 
     // Gera a tabela do torneio Individual 
-    // Recebe o array de 8 objetos jogador (já sorteados ou na ordem da tela)
+    // Recebe o array de jogadores (já sorteados ou na ordem da tela)
     generateRounds: (players) => {
-        if (players.length !== 8) {
-            console.error("Super 8 exige exatamente 8 jogadores. Implementar logica generica se necessario.");
-            // Para escopo inicial flexível, embaralhamos a lista
-        }
-
         let rounds = [];
-        // Embaralhar para não ser previsível quem vai jogar com quem baseado na ordem de input
         let shuffledPlayers = Utils.shuffle([...players]);
 
-        IndividualMode.MATRIX_8.forEach((roundMatrix, rIndex) => {
-            let matches = [];
-            roundMatrix.forEach((matchIndices, mIndex) => {
-                matches.push({
-                    id: `ind_r${rIndex}_m${mIndex}`,
-                    t1: [ shuffledPlayers[matchIndices[0]], shuffledPlayers[matchIndices[1]] ],
-                    t2: [ shuffledPlayers[matchIndices[2]], shuffledPlayers[matchIndices[3]] ],
-                    score1: null,
-                    score2: null,
-                    finished: false
+        if (players.length === 8) {
+            // Usa matriz perfeita para 8 jogadores
+            IndividualMode.MATRIX_8.forEach((roundMatrix, rIndex) => {
+                let matches = [];
+                roundMatrix.forEach((matchIndices, mIndex) => {
+                    matches.push({
+                        id: `ind_r${rIndex}_m${mIndex}`,
+                        t1: [ shuffledPlayers[matchIndices[0]], shuffledPlayers[matchIndices[1]] ],
+                        t2: [ shuffledPlayers[matchIndices[2]], shuffledPlayers[matchIndices[3]] ],
+                        score1: null,
+                        score2: null,
+                        finished: false
+                    });
+                });
+                rounds.push({
+                    roundNum: rIndex + 1,
+                    matches: matches
                 });
             });
-            rounds.push({
-                roundNum: rIndex + 1,
-                matches: matches
-            });
-        });
+        } else {
+            // Lógica genérica para N jogadores (múltiplo de 4)
+            // Gera um número fixo de rodadas (ex: 3 se 4 jog., 7 para os demais)
+            let numRounds = players.length === 4 ? 3 : 7;
+            
+            for (let rIndex = 0; rIndex < numRounds; rIndex++) {
+                let matches = [];
+                let roundPlayers = Utils.shuffle([...players]);
+                
+                let mIndex = 0;
+                for (let i = 0; i < roundPlayers.length; i += 4) {
+                    matches.push({
+                        id: `ind_r${rIndex}_m${mIndex}`,
+                        t1: [ roundPlayers[i], roundPlayers[i+1] ],
+                        t2: [ roundPlayers[i+2], roundPlayers[i+3] ],
+                        score1: null,
+                        score2: null,
+                        finished: false
+                    });
+                    mIndex++;
+                }
+                
+                rounds.push({
+                    roundNum: rIndex + 1,
+                    matches: matches
+                });
+            }
+        }
 
         return {
             type: 'individual',

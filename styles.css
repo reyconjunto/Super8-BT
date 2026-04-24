@@ -427,6 +427,34 @@ p { font-size: 0.95rem; color: var(--sand-secondary); text-align: center; margin
     opacity: 1;
 }
 
+/* Large Number Input for Setup */
+.large-number-input {
+    width: 120px;
+    background: rgba(0,0,0,0.3);
+    border: 2px solid var(--glass-border);
+    color: var(--sunset-orange);
+    font-size: 2rem;
+    font-weight: 800;
+    text-align: center;
+    padding: 10px;
+    border-radius: 12px;
+    outline: none;
+    transition: all 0.3s;
+    font-family: var(--font-heading);
+}
+.large-number-input:focus {
+    border-color: var(--sunset-orange);
+    box-shadow: 0 0 15px rgba(255, 123, 0, 0.3);
+}
+
+.large-number-input::-webkit-inner-spin-button, 
+.large-number-input::-webkit-outer-spin-button { 
+    filter: invert(1); 
+    opacity: 1;
+    transform: scale(1.5);
+    margin-left: 10px;
+}
+
 /* Ranking Table */
 .ranking-table {
     width: 100%;
