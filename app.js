@@ -77,6 +77,9 @@ const App = {
                 location.reload();
             }
         });
+
+        // Export
+        document.getElementById('btn-export-csv').addEventListener('click', App.exportCSV);
     },
 
     // --- UI Navigation ---
@@ -106,6 +109,7 @@ const App = {
         const numSetup = document.getElementById('num-players-setup');
         const numInput = document.getElementById('num-players-input');
         const numHint = document.getElementById('num-players-hint');
+        const fixedModeSel = document.getElementById('fixed-mode-selection');
         
         numSetup.style.display = 'block';
         
@@ -113,10 +117,12 @@ const App = {
             numInput.value = 8;
             numInput.step = 4;
             numHint.innerText = '* Na modalidade individual, o número de atletas deve ser múltiplo de 4.';
+            fixedModeSel.style.display = 'none';
         } else {
             numInput.value = 16;
             numInput.step = 2;
             numHint.innerText = '* O número de atletas deve ser par (para formar as duplas).';
+            fixedModeSel.style.display = 'block';
         }
         
         App.validateFormatSetup();
@@ -140,13 +146,26 @@ const App = {
         const numInput = document.getElementById('num-players-input');
         App.state.numPlayers = parseInt(numInput.value);
 
+        const modeRadio = document.querySelector('input[name="fixed_mode"]:checked');
+        App.state.fixedRegistrationMode = (App.state.format === 'fixed' && modeRadio) ? modeRadio.value : 'individual';
+
         // Re-render inputs in case format changed
         App.renderPlayerInputs();
         App.validatePlayers();
         
-        document.getElementById('players-title').innerText = App.state.format === 'individual' 
-            ? `Elenco (${App.state.numPlayers} Jogadores)` 
-            : `Elenco (${App.state.numPlayers} Jogadores / ${App.state.numPlayers/2} Duplas)`;
+        if (App.state.format === 'individual') {
+            document.getElementById('players-title').innerText = `Elenco (${App.state.numPlayers} Jogadores)`;
+            document.querySelector('#setup-players-screen p').innerHTML = 'Cadastre os jogadores. Marque a estrela ⭐ para sinalizar os <strong>Cabeças de Chave</strong>.';
+        } else {
+            if (App.state.fixedRegistrationMode === 'predefined') {
+                document.getElementById('players-title').innerText = `Elenco (${App.state.numPlayers/2} Duplas Prontas)`;
+                document.querySelector('#setup-players-screen p').innerHTML = 'Cadastre o nome de cada dupla.';
+            } else {
+                document.getElementById('players-title').innerText = `Elenco (${App.state.numPlayers} Jogadores / ${App.state.numPlayers/2} Duplas)`;
+                document.querySelector('#setup-players-screen p').innerHTML = 'Cadastre os jogadores. Marque a estrela ⭐ para sinalizar os <strong>Cabeças de Chave</strong>.';
+            }
+        }
+        
         App.switchScreen('setup-players-screen');
     },
 
@@ -154,14 +173,27 @@ const App = {
     renderPlayerInputs: () => {
         const container = document.getElementById('players-list');
         container.innerHTML = '';
-        for(let i=0; i<App.state.numPlayers; i++) {
-            container.innerHTML += `
-                <div class="player-input-row">
-                    <span class="player-num">${i+1}.</span>
-                    <input type="text" class="p-input" data-index="${i}" placeholder="Nome do Jogador ${i+1}">
-                    <button class="seed-toggle" data-index="${i}" title="Marcar como Cabeça de Chave">⭐</button>
-                </div>
-            `;
+        
+        if (App.state.format === 'fixed' && App.state.fixedRegistrationMode === 'predefined') {
+            const numPairs = App.state.numPlayers / 2;
+            for(let i=0; i<numPairs; i++) {
+                container.innerHTML += `
+                    <div class="player-input-row">
+                        <span class="player-num">${i+1}.</span>
+                        <input type="text" class="p-input" data-index="${i}" placeholder="Nome da Dupla ${i+1} (ex: João & Maria)">
+                    </div>
+                `;
+            }
+        } else {
+            for(let i=0; i<App.state.numPlayers; i++) {
+                container.innerHTML += `
+                    <div class="player-input-row">
+                        <span class="player-num">${i+1}.</span>
+                        <input type="text" class="p-input" data-index="${i}" placeholder="Nome do Jogador ${i+1}">
+                        <button class="seed-toggle" data-index="${i}" title="Marcar como Cabeça de Chave">⭐</button>
+                    </div>
+                `;
+            }
         }
     },
 
@@ -182,8 +214,23 @@ const App = {
     },
 
     processPlayers: () => {
-        // Collect players
+        // Collect players or predefined pairs
         const inputs = document.querySelectorAll('.p-input');
+        
+        if (App.state.format === 'fixed' && App.state.fixedRegistrationMode === 'predefined') {
+            App.state.fixedPairs = [];
+            for(let i=0; i<inputs.length; i++) {
+                App.state.fixedPairs.push({
+                    id: `pair_${i}`,
+                    name: inputs[i].value.trim(),
+                    p1: { name: inputs[i].value.trim(), isSeed: false }, 
+                    p2: { name: '', isSeed: false }
+                });
+            }
+            App.startTournament();
+            return;
+        }
+
         const toggles = document.querySelectorAll('.seed-toggle');
         
         App.state.players = [];
@@ -325,11 +372,11 @@ const App = {
         App.state.stats = {};
         if (App.state.format === 'individual') {
             App.state.players.forEach(p => {
-                App.state.stats[p.id] = { obj: p, pts: 0, sg: 0, pro: 0 };
+                App.state.stats[p.id] = { obj: p, wins: 0, sg: 0, pro: 0 };
             });
         } else {
             App.state.fixedPairs.forEach(p => {
-                App.state.stats[p.id] = { obj: p, pts: 0, sg: 0, pro: 0 };
+                App.state.stats[p.id] = { obj: p, wins: 0, sg: 0, pro: 0 };
             });
         }
     },
@@ -415,13 +462,13 @@ const App = {
                 const res = Scoring.calculateMatchScore(s1, s2);
                 
                 if (App.state.format === 'individual') {
-                    App.addStatsToPlayer(match.t1[0].id, res.ptsA, res.sgA, res.proA);
-                    App.addStatsToPlayer(match.t1[1].id, res.ptsA, res.sgA, res.proA);
-                    App.addStatsToPlayer(match.t2[0].id, res.ptsB, res.sgB, res.proB);
-                    App.addStatsToPlayer(match.t2[1].id, res.ptsB, res.sgB, res.proB);
+                    App.addStatsToPlayer(match.t1[0].id, res.winsA, res.sgA, res.proA);
+                    App.addStatsToPlayer(match.t1[1].id, res.winsA, res.sgA, res.proA);
+                    App.addStatsToPlayer(match.t2[0].id, res.winsB, res.sgB, res.proB);
+                    App.addStatsToPlayer(match.t2[1].id, res.winsB, res.sgB, res.proB);
                 } else {
-                    App.addStatsToPlayer(match.t1.id, res.ptsA, res.sgA, res.proA);
-                    App.addStatsToPlayer(match.t2.id, res.ptsB, res.sgB, res.proB);
+                    App.addStatsToPlayer(match.t1.id, res.winsA, res.sgA, res.proA);
+                    App.addStatsToPlayer(match.t2.id, res.winsB, res.sgB, res.proB);
                 }
             }
         });
@@ -446,13 +493,13 @@ const App = {
             const res = Scoring.calculateMatchScore(match.score1, match.score2);
             
             if (App.state.format === 'individual') {
-                App.addStatsToPlayer(match.t1[0].id, -res.ptsA, -res.sgA, -res.proA);
-                App.addStatsToPlayer(match.t1[1].id, -res.ptsA, -res.sgA, -res.proA);
-                App.addStatsToPlayer(match.t2[0].id, -res.ptsB, -res.sgB, -res.proB);
-                App.addStatsToPlayer(match.t2[1].id, -res.ptsB, -res.sgB, -res.proB);
+                App.addStatsToPlayer(match.t1[0].id, -res.winsA, -res.sgA, -res.proA);
+                App.addStatsToPlayer(match.t1[1].id, -res.winsA, -res.sgA, -res.proA);
+                App.addStatsToPlayer(match.t2[0].id, -res.winsB, -res.sgB, -res.proB);
+                App.addStatsToPlayer(match.t2[1].id, -res.winsB, -res.sgB, -res.proB);
             } else {
-                App.addStatsToPlayer(match.t1.id, -res.ptsA, -res.sgA, -res.proA);
-                App.addStatsToPlayer(match.t2.id, -res.ptsB, -res.sgB, -res.proB);
+                App.addStatsToPlayer(match.t1.id, -res.winsA, -res.sgA, -res.proA);
+                App.addStatsToPlayer(match.t2.id, -res.winsB, -res.sgB, -res.proB);
             }
             
             match.finished = false;
@@ -463,9 +510,9 @@ const App = {
         App.renderRanking();
     },
 
-    addStatsToPlayer: (id, pts, sg, pro) => {
+    addStatsToPlayer: (id, wins, sg, pro) => {
         if (!App.state.stats[id]) return;
-        App.state.stats[id].pts += pts;
+        App.state.stats[id].wins += wins;
         App.state.stats[id].sg += sg;
         App.state.stats[id].pro += pro;
     },
@@ -480,16 +527,41 @@ const App = {
 
         statsArray.forEach((stat, index) => {
             let medal = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : ''));
+            let finalScore = (stat.wins * 10) + stat.sg;
             tbody.innerHTML += `
                <tr>
                     <td>${index + 1}</td>
                     <td class="player-name">${stat.obj.name} <span class="medal">${medal}</span></td>
-                    <td><strong>${stat.pts}</strong></td>
+                    <td><strong>${finalScore}</strong></td>
+                    <td>${stat.wins}</td>
                     <td>${stat.sg}</td>
                     <td>${stat.pro}</td>
                </tr> 
             `;
         });
+    },
+
+    exportCSV: () => {
+        let statsArray = Object.values(App.state.stats);
+        statsArray = Scoring.sortRanking(statsArray);
+        
+        let csvContent = "Posicao,Nome,Pontos Totais,Vitorias,Saldo de Games,Games Pro\n";
+        
+        statsArray.forEach((stat, index) => {
+            let finalScore = (stat.wins * 10) + stat.sg;
+            let name = stat.obj.name.replace(/"/g, '""');
+            csvContent += `${index + 1},"${name}",${finalScore},${stat.wins},${stat.sg},${stat.pro}\n`;
+        });
+        
+        // Add BOM for Excel UTF-8 compatibility
+        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", "classificacao_super8bt.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 };
 

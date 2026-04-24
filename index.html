@@ -41,6 +41,18 @@
                     <label for="num-players-input" style="font-weight: 700; font-size: 1.2rem; display: block; margin-bottom: 15px; color: var(--sunset-yellow);">Quantidade de Atletas</label>
                     <input type="number" id="num-players-input" class="large-number-input" value="8" min="4">
                     <p id="num-players-hint" style="font-size: 0.9rem; margin-top: 15px; color: var(--sand-secondary);"></p>
+                    
+                    <div id="fixed-mode-selection" style="display: none; margin-top: 15px; text-align: left; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px;">
+                        <p style="color: var(--sunset-yellow); margin-bottom: 10px; font-weight: 600;">Como deseja cadastrar?</p>
+                        <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px; cursor: pointer; color: var(--sand-primary);">
+                            <input type="radio" name="fixed_mode" value="individual" checked>
+                            Cadastrar 1 a 1 e sortear/montar depois
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: var(--sand-primary);">
+                            <input type="radio" name="fixed_mode" value="predefined">
+                            Cadastrar as duplas já prontas
+                        </label>
+                    </div>
                 </div>
 
                 <div class="actions mt-4">
@@ -51,10 +63,10 @@
                 <div class="rules-footer mt-4" style="text-align: left; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; font-size: 0.85rem; color: var(--sand-secondary);">
                     <h4 style="color: var(--sunset-yellow); margin-bottom: 8px;">📋 Critérios de Vitória e Desempate</h4>
                     <ol style="margin-left: 20px; line-height: 1.5;">
-                        <li><strong>Pontos:</strong> Cada vitória vale 1 ponto.</li>
-                        <li><strong>Saldo de Games (SG):</strong> Em caso de empate em pontos, a vantagem é de quem possui o maior saldo (Games Ganhos - Games Perdidos).</li>
-                        <li><strong>Confronto Direto:</strong> Usado caso o saldo seja igual (entre dois empatados).</li>
-                        <li><strong>Games Pró:</strong> Persistindo o empate, ganha quem fez mais games a favor ao longo do torneio.</li>
+                        <li><strong>Pontos (Pts):</strong> Calculados pela fórmula: <code>(Vitórias x 10) + Saldo de Games</code>.</li>
+                        <li><strong>Vitórias (V):</strong> Quem tiver mais vitórias (em caso de empate nos pontos totais).</li>
+                        <li><strong>Saldo de Games (SG):</strong> Games Ganhos - Games Perdidos.</li>
+                        <li><strong>Games Pró:</strong> Ganha quem fez mais games a favor ao longo do torneio.</li>
                     </ol>
                 </div>
             </div>
@@ -119,15 +131,19 @@
 
             <!-- Tab: Ranking -->
             <div id="tab-ranking" class="tab-content">
+                <div style="text-align: right; margin-bottom: 10px;">
+                    <button class="btn btn-secondary" id="btn-export-csv" style="width:auto; padding: 5px 15px; font-size: 0.85rem; border-color: var(--sunset-yellow); color: var(--sunset-yellow);">📊 Exportar Planilha</button>
+                </div>
                 <div class="glass-card pd-0">
                     <table class="ranking-table">
                         <thead>
                             <tr>
                                 <th>#</th>
                                 <th id="rank-name-col">Jogador</th>
-                                <th>Pts</th>
-                                <th>SG</th>
-                                <th>Pró</th>
+                                <th title="Pontuação Total">Pts</th>
+                                <th title="Vitórias">V</th>
+                                <th title="Saldo de Games">SG</th>
+                                <th title="Games Pró">Pró</th>
                             </tr>
                         </thead>
                         <tbody id="ranking-body">

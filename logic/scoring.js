@@ -1,19 +1,19 @@
 // Scoring System
 const Scoring = {
-    // Calcula pontos de uma partida onde [scoreA, scoreB] sao os games vencidos
-    // Retorna { ptsA, ptsB, sgA, sgB } (sg = Saldo de Games)
+    // Calcula vitórias de uma partida onde [scoreA, scoreB] sao os games vencidos
+    // Retorna { winsA, winsB, sgA, sgB, proA, proB }
     calculateMatchScore: (scoreA, scoreB) => {
-        let ptsA = 0, ptsB = 0;
+        let winsA = 0, winsB = 0;
         
         if (scoreA > scoreB) {
-            ptsA = 1;
+            winsA = 1;
         } else if (scoreB > scoreA) {
-            ptsB = 1;
-        } // Em caso de empate, ninguem ganha ponto de vitoria no Beach Tennis geralmente (ou eh tiebreak), mas manteremos 0 a 0
+            winsB = 1;
+        } // Em caso de empate, nenhum ganha vitoria (ou eh tiebreak), mantemos 0 a 0
         
         return {
-            ptsA,
-            ptsB,
+            winsA,
+            winsB,
             sgA: scoreA - scoreB,
             sgB: scoreB - scoreA,
             proA: scoreA,
@@ -22,26 +22,24 @@ const Scoring = {
     },
 
     // Ordena o array de stats baseado nos criterios:
-    // 1. Pontos (Vitórias)
-    // 2. Saldo de Games
-    // 3. Confronto Direto (Simples - complexo de aplicar genérico se for empate triplo, então tentaremos H2H se for 2)
+    // 1. Pontuação (Vitórias * 10) + SG
+    // 2. Vitórias
+    // 3. Saldo de Games
     // 4. Games Pró
     sortRanking: (statsList) => {
         return statsList.sort((a, b) => {
-            // 1. Pontos
-            if (b.pts !== a.pts) return b.pts - a.pts;
-            // 2. Saldo de games
+            let scoreA = (a.wins * 10) + a.sg;
+            let scoreB = (b.wins * 10) + b.sg;
+
+            // 1. Pontos totais
+            if (scoreB !== scoreA) return scoreB - scoreA;
+            
+            // 2. Vitórias
+            if (b.wins !== a.wins) return b.wins - a.wins;
+            
+            // 3. Saldo de games
             if (b.sg !== a.sg) return b.sg - a.sg;
             
-            // 3. Confronto direto (simplificado, se h2h foi providenciado). 
-            // O ideal para H2H é olhar os jogos passados, mas como a estrutura recebe apenas acumulados,
-            // podemos injetar uma funcao de comparacao extra, mas usaremos Games Pro primeiro se nao houver.
-            if (b.h2h_vs_a !== undefined && a.h2h_vs_b !== undefined) {
-                // A logic higher up will set h2h flags if needed.
-                if (b.h2h_vs_a === 1) return 1;
-                if (a.h2h_vs_b === 1) return -1;
-            }
-
             // 4. Games pro
             if (b.pro !== a.pro) return b.pro - a.pro;
             
