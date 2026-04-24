@@ -116,7 +116,7 @@ const App = {
         } else {
             numInput.value = 16;
             numInput.step = 2;
-            numHint.innerText = '* Na modalidade de duplas fixas, o número deve ser par.';
+            numHint.innerText = '* O número de atletas deve ser par (para formar as duplas).';
         }
         
         App.validateFormatSetup();
