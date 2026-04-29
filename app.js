@@ -115,8 +115,8 @@ const App = {
         
         if (formatType === 'individual') {
             numInput.value = 8;
-            numInput.step = 4;
-            numHint.innerText = '* Na modalidade individual, o número de atletas deve ser múltiplo de 4.';
+            numInput.step = 1;
+            numHint.innerText = '* Na modalidade individual, o número de atletas deve ser no mínimo 4.';
             fixedModeSel.style.display = 'none';
         } else {
             numInput.value = 16;
@@ -134,7 +134,7 @@ const App = {
         const btn = document.getElementById('btn-next-to-players');
         
         if (App.state.format === 'individual') {
-            btn.disabled = isNaN(val) || val < 4 || val % 4 !== 0;
+            btn.disabled = isNaN(val) || val < 4;
         } else if (App.state.format === 'fixed') {
             btn.disabled = isNaN(val) || val < 4 || val % 2 !== 0;
         } else {
