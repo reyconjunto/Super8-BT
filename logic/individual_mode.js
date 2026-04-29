@@ -31,6 +31,7 @@ const IndividualMode = {
                         id: `ind_r${rIndex}_m${mIndex}`,
                         t1: [ shuffledPlayers[matchIndices[0]], shuffledPlayers[matchIndices[1]] ],
                         t2: [ shuffledPlayers[matchIndices[2]], shuffledPlayers[matchIndices[3]] ],
+                        dummies: [],
                         score1: null,
                         score2: null,
                         finished: false
@@ -49,19 +50,20 @@ const IndividualMode = {
         }
 
         // Lógica "Rei da Praia" para N jogadores (qualquer número >= 4)
-        // Gera rodadas baseadas no número de jogadores para garantir bom aproveitamento
-        let numRounds = 7;
-        if (numPlayers === 4) numRounds = 3;
-        else if (numPlayers === 5) numRounds = 5;
-        else if (numPlayers === 6) numRounds = 6;
-        else if (numPlayers > 12) numRounds = Math.ceil((6 * numPlayers) / (4 * numCourts)); // Garante média ~6 jogos por atleta
+        // Regra: Todos jogam N-1 partidas. Vagas excedentes serão preenchidas por "Dummies" (Curingas).
+        let targetMatches = numPlayers - 1; 
+        
+        let totalSlotsNeeded = numPlayers * targetMatches;
+        let numRounds = Math.ceil(totalSlotsNeeded / (4 * numCourts));
 
-        let playedMatches = {};
+        let realMatches = {};
+        let dummyMatches = {};
         let partnerCount = {};
         let opponentCount = {};
         
         shuffledPlayers.forEach(p => {
-            playedMatches[p.id] = 0;
+            realMatches[p.id] = 0;
+            dummyMatches[p.id] = 0;
             partnerCount[p.id] = {};
             opponentCount[p.id] = {};
             shuffledPlayers.forEach(p2 => {
@@ -71,21 +73,33 @@ const IndividualMode = {
         });
 
         for (let rIndex = 0; rIndex < numRounds; rIndex++) {
-            // 1. Prioriza jogadores com menos partidas disputadas
-            let sortedPlayers = [...shuffledPlayers].sort((a, b) => playedMatches[a.id] - playedMatches[b.id]);
+            // 1. Prioriza jogadores com menos partidas reais disputadas.
+            // Em caso de empate, prioriza quem foi Curinga (Dummy) menos vezes.
+            let sortedPlayers = [...shuffledPlayers].sort((a, b) => {
+                if (realMatches[a.id] !== realMatches[b.id]) {
+                    return realMatches[a.id] - realMatches[b.id];
+                }
+                return dummyMatches[a.id] - dummyMatches[b.id];
+            });
             
-            // Agrupa por número de partidas e embaralha para evitar vícios em empates
+            // Agrupa por número de partidas (reais_dummy) e embaralha para evitar vícios em empates
             let grouped = {};
             sortedPlayers.forEach(p => {
-                let count = playedMatches[p.id];
-                if (!grouped[count]) grouped[count] = [];
-                grouped[count].push(p);
+                let key = `${realMatches[p.id]}_${dummyMatches[p.id]}`;
+                if (!grouped[key]) grouped[key] = [];
+                grouped[key].push(p);
             });
             
             let selectedPlayers = [];
-            let counts = Object.keys(grouped).sort((a,b) => parseInt(a) - parseInt(b));
-            for (let count of counts) {
-                let group = Utils.shuffle(grouped[count]);
+            let keys = Object.keys(grouped).sort((a,b) => {
+                let [rA, dA] = a.split('_').map(Number);
+                let [rB, dB] = b.split('_').map(Number);
+                if (rA !== rB) return rA - rB;
+                return dA - dB;
+            });
+            
+            for (let key of keys) {
+                let group = Utils.shuffle(grouped[key]);
                 for (let p of group) {
                     if (selectedPlayers.length < 4 * numCourts) {
                         selectedPlayers.push(p);
@@ -122,6 +136,7 @@ const IndividualMode = {
                         id: `ind_r${rIndex}_m${c}`,
                         t1: [A, B],
                         t2: [C, D],
+                        dummies: [],
                         score1: null,
                         score2: null,
                         finished: false
@@ -134,12 +149,19 @@ const IndividualMode = {
                 }
             }
             
-            // Aplica as melhores combinações encontradas
+            // Aplica as melhores combinações encontradas e atribui status de Dummy
             bestMatches.forEach(m => {
+                let matchPlayers = [m.t1[0], m.t1[1], m.t2[0], m.t2[1]];
+                matchPlayers.forEach(p => {
+                    if (realMatches[p.id] < targetMatches) {
+                        realMatches[p.id]++;
+                    } else {
+                        dummyMatches[p.id]++;
+                        m.dummies.push(p.id);
+                    }
+                });
+
                 let A = m.t1[0], B = m.t1[1], C = m.t2[0], D = m.t2[1];
-                playedMatches[A.id]++; playedMatches[B.id]++;
-                playedMatches[C.id]++; playedMatches[D.id]++;
-                
                 partnerCount[A.id][B.id]++; partnerCount[B.id][A.id]++;
                 partnerCount[C.id][D.id]++; partnerCount[D.id][C.id]++;
                 

@@ -392,8 +392,13 @@ const App = {
                 let t2Name = '';
                 
                 if (App.state.format === 'individual') {
-                    t1Name = `${match.t1[0].name} & ${match.t1[1].name}`;
-                    t2Name = `${match.t2[0].name} & ${match.t2[1].name}`;
+                    const dummies = match.dummies || [];
+                    let p1 = dummies.includes(match.t1[0].id) ? `${match.t1[0].name} 🃏` : match.t1[0].name;
+                    let p2 = dummies.includes(match.t1[1].id) ? `${match.t1[1].name} 🃏` : match.t1[1].name;
+                    let p3 = dummies.includes(match.t2[0].id) ? `${match.t2[0].name} 🃏` : match.t2[0].name;
+                    let p4 = dummies.includes(match.t2[1].id) ? `${match.t2[1].name} 🃏` : match.t2[1].name;
+                    t1Name = `${p1} & ${p2}`;
+                    t2Name = `${p3} & ${p4}`;
                 } else {
                     t1Name = match.t1.name;
                     t2Name = match.t2.name;
@@ -462,10 +467,11 @@ const App = {
                 const res = Scoring.calculateMatchScore(s1, s2);
                 
                 if (App.state.format === 'individual') {
-                    App.addStatsToPlayer(match.t1[0].id, res.winsA, res.sgA, res.proA);
-                    App.addStatsToPlayer(match.t1[1].id, res.winsA, res.sgA, res.proA);
-                    App.addStatsToPlayer(match.t2[0].id, res.winsB, res.sgB, res.proB);
-                    App.addStatsToPlayer(match.t2[1].id, res.winsB, res.sgB, res.proB);
+                    const dummies = match.dummies || [];
+                    if (!dummies.includes(match.t1[0].id)) App.addStatsToPlayer(match.t1[0].id, res.winsA, res.sgA, res.proA);
+                    if (!dummies.includes(match.t1[1].id)) App.addStatsToPlayer(match.t1[1].id, res.winsA, res.sgA, res.proA);
+                    if (!dummies.includes(match.t2[0].id)) App.addStatsToPlayer(match.t2[0].id, res.winsB, res.sgB, res.proB);
+                    if (!dummies.includes(match.t2[1].id)) App.addStatsToPlayer(match.t2[1].id, res.winsB, res.sgB, res.proB);
                 } else {
                     App.addStatsToPlayer(match.t1.id, res.winsA, res.sgA, res.proA);
                     App.addStatsToPlayer(match.t2.id, res.winsB, res.sgB, res.proB);
@@ -493,10 +499,11 @@ const App = {
             const res = Scoring.calculateMatchScore(match.score1, match.score2);
             
             if (App.state.format === 'individual') {
-                App.addStatsToPlayer(match.t1[0].id, -res.winsA, -res.sgA, -res.proA);
-                App.addStatsToPlayer(match.t1[1].id, -res.winsA, -res.sgA, -res.proA);
-                App.addStatsToPlayer(match.t2[0].id, -res.winsB, -res.sgB, -res.proB);
-                App.addStatsToPlayer(match.t2[1].id, -res.winsB, -res.sgB, -res.proB);
+                const dummies = match.dummies || [];
+                if (!dummies.includes(match.t1[0].id)) App.addStatsToPlayer(match.t1[0].id, -res.winsA, -res.sgA, -res.proA);
+                if (!dummies.includes(match.t1[1].id)) App.addStatsToPlayer(match.t1[1].id, -res.winsA, -res.sgA, -res.proA);
+                if (!dummies.includes(match.t2[0].id)) App.addStatsToPlayer(match.t2[0].id, -res.winsB, -res.sgB, -res.proB);
+                if (!dummies.includes(match.t2[1].id)) App.addStatsToPlayer(match.t2[1].id, -res.winsB, -res.sgB, -res.proB);
             } else {
                 App.addStatsToPlayer(match.t1.id, -res.winsA, -res.sgA, -res.proA);
                 App.addStatsToPlayer(match.t2.id, -res.winsB, -res.sgB, -res.proB);
