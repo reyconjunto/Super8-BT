@@ -386,6 +386,15 @@ const App = {
         const container = document.getElementById('rounds-container');
         container.innerHTML = '';
 
+        const dummyAlert = document.getElementById('individual-dummy-alert');
+        if (dummyAlert) {
+            let hasDummies = false;
+            if (App.state.format === 'individual' && App.state.tournament && App.state.tournament.rounds) {
+                hasDummies = App.state.tournament.rounds.some(r => r.matches.some(m => m.dummies && m.dummies.length > 0));
+            }
+            dummyAlert.style.display = hasDummies ? 'block' : 'none';
+        }
+
         App.state.tournament.rounds.forEach(round => {
             let matchesHtml = round.matches.map(match => {
                 let t1Name = '';
