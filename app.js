@@ -383,6 +383,21 @@ const App = {
 
     // --- MATCHES RENDER ---
     renderRounds: () => {
+        // Preservar valores digitados que ainda não foram salvos
+        if (App.state.tournament && App.state.tournament.rounds) {
+            document.querySelectorAll('.score-input:not(:disabled)').forEach(input => {
+                const mid = input.dataset.mid;
+                const team = input.dataset.team;
+                for (const r of App.state.tournament.rounds) {
+                    const m = r.matches.find(x => x.id === mid);
+                    if (m && !m.finished) {
+                        if (team === '1') m.score1 = input.value === '' ? null : parseInt(input.value);
+                        if (team === '2') m.score2 = input.value === '' ? null : parseInt(input.value);
+                    }
+                }
+            });
+        }
+
         const container = document.getElementById('rounds-container');
         container.innerHTML = '';
 
