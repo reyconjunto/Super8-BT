@@ -497,7 +497,8 @@ const App = {
                     t2Name = match.t2.name;
                 }
 
-                let courtNum = (mIndex % (App.state.numCourts || 1)) + 1;
+                let courtNum = (globalMatchIndex % (App.state.numCourts || 1)) + 1;
+                globalMatchIndex++;
 
                 let isReadonly = App.isViewMode || match.finished ? 'disabled' : '';
 
