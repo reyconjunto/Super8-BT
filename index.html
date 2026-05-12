@@ -24,6 +24,9 @@
     <div class="app-container">
         <!-- Header -->
         <header class="app-header">
+            <div id="view-mode-banner" style="display: none; background: var(--sunset-orange); color: white; text-align: center; padding: 5px; font-weight: 600; border-radius: 8px; margin-bottom: 15px; font-size: 0.9rem;">
+                👀 MODO ESPECTADOR (Tempo Real)
+            </div>
             <img src="ReyPlay.png" alt="Rey Play" class="main-logo" />
         </header>
 
@@ -132,8 +135,9 @@
                 <button class="tab" data-target="tab-ranking">Classificação</button>
             </div>
             
-            <div style="text-align: right; margin-bottom: 10px;">
-                <button class="btn btn-secondary" id="btn-reset-tournament" style="width:auto; padding: 5px 15px; font-size: 0.85rem;">🗑️ Encerrar / Novo Torneio</button>
+            <div style="text-align: right; margin-bottom: 10px; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap;">
+                <button class="btn btn-secondary admin-only" id="btn-share-link" style="width:auto; padding: 5px 15px; font-size: 0.85rem; border-color: var(--sunset-orange); color: var(--sunset-orange);">🔗 Compartilhar Link</button>
+                <button class="btn btn-secondary admin-only" id="btn-reset-tournament" style="width:auto; padding: 5px 15px; font-size: 0.85rem;">🗑️ Encerrar Torneio</button>
             </div>
 
             <!-- Tab: Matches -->
@@ -182,6 +186,10 @@
         </section>
         
     </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
     <!-- Logic Modules -->
     <script src="logic/utils.js"></script>

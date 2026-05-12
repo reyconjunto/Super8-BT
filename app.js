@@ -1,5 +1,23 @@
+// Firebase Configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyBBRzdWGygJ9dlk5NaNbSU84upSmZI-Bq4",
+    authDomain: "rey-play.firebaseapp.com",
+    projectId: "rey-play",
+    storageBucket: "rey-play.firebasestorage.app",
+    messagingSenderId: "694155497534",
+    appId: "1:694155497534:web:bb82694e98af2398d8416f",
+    databaseURL: "https://rey-play-default-rtdb.firebaseio.com"
+};
+
+let db = null;
+if (typeof firebase !== 'undefined') {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+}
+
 // Main Application Logic
 const App = {
+    isViewMode: false,
     state: {
         players: [],
         format: null, // 'individual' or 'fixed'
@@ -12,15 +30,41 @@ const App = {
 
     init: () => {
         App.bindEvents();
-        if (App.loadState()) {
-            if (App.state.tournament) {
-                App.resumeTournament();
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const tId = urlParams.get('t');
+
+        if (tId && db) {
+            App.isViewMode = true;
+            document.getElementById('view-mode-banner').style.display = 'block';
+            document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+            
+            db.ref('tournaments/' + tId).on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    App.state = data;
+                    if (App.state.tournament) {
+                        App.resumeTournament();
+                    }
+                } else {
+                    alert("Torneio não encontrado ou ID inválido.");
+                }
+            });
+        } else {
+            if (App.loadState()) {
+                if (App.state.tournament) {
+                    App.resumeTournament();
+                }
             }
         }
     },
 
     saveState: () => {
+        if (App.isViewMode) return;
         localStorage.setItem('super8bt_state', JSON.stringify(App.state));
+        if (App.state.tournamentId && db) {
+            db.ref('tournaments/' + App.state.tournamentId).set(App.state);
+        }
     },
 
     loadState: () => {
@@ -81,6 +125,23 @@ const App = {
 
         // Export
         document.getElementById('btn-export-csv').addEventListener('click', App.exportCSV);
+
+        // Share
+        const shareBtn = document.getElementById('btn-share-link');
+        if (shareBtn) {
+            shareBtn.addEventListener('click', () => {
+                if (App.state.tournamentId) {
+                    const url = window.location.origin + window.location.pathname + '?t=' + App.state.tournamentId;
+                    navigator.clipboard.writeText(url).then(() => {
+                        alert('Link copiado! Envie para os jogadores:\n\n' + url);
+                    }).catch(err => {
+                        alert('Erro ao copiar automaticamente. Compartilhe o link abaixo:\n\n' + url);
+                    });
+                } else {
+                    alert('Inicie o torneio primeiro!');
+                }
+            });
+        }
     },
 
     // --- UI Navigation ---
@@ -358,6 +419,10 @@ const App = {
     startTournament: () => {
         App.initStats();
 
+        if (!App.state.tournamentId) {
+            App.state.tournamentId = Math.random().toString(36).substring(2, 7).toUpperCase();
+        }
+
         if (App.state.format === 'individual') {
             App.state.tournament = IndividualMode.generateRounds(App.state.players);
             document.getElementById('rank-name-col').innerText = 'Jogador';
@@ -434,6 +499,8 @@ const App = {
 
                 let courtNum = (mIndex % (App.state.numCourts || 1)) + 1;
 
+                let isReadonly = App.isViewMode || match.finished ? 'disabled' : '';
+
                 return `
                     <div class="match-card" id="${match.id}">
                         <div class="match-teams">
@@ -443,9 +510,9 @@ const App = {
                         </div>
                         <div class="match-score">
                             <div class="court-badge">Quadra ${courtNum}</div>
-                            <input type="number" min="0" class="score-input s-out" data-mid="${match.id}" data-team="1" ${match.finished ? 'disabled' : ''} value="${match.score1 !== null ? match.score1 : ''}">
+                            <input type="number" min="0" class="score-input s-out" data-mid="${match.id}" data-team="1" ${isReadonly} value="${match.score1 !== null ? match.score1 : ''}">
                             <span class="vs">X</span>
-                            <input type="number" min="0" class="score-input s-out" data-mid="${match.id}" data-team="2" ${match.finished ? 'disabled' : ''} value="${match.score2 !== null ? match.score2 : ''}">
+                            <input type="number" min="0" class="score-input s-out" data-mid="${match.id}" data-team="2" ${isReadonly} value="${match.score2 !== null ? match.score2 : ''}">
                         </div>
                     </div>
                 `;
@@ -453,14 +520,18 @@ const App = {
 
             const allFinished = round.matches.length > 0 && round.matches.every(m => m.finished);
 
+            let actionHtml = '';
+            if (!App.isViewMode) {
+                actionHtml = allFinished 
+                    ? `<button class="btn-edit-round btn-secondary" data-rn="${round.roundNum}" style="padding:5px 12px;font-size:0.8rem;width:auto;">✏️ Editar</button>`
+                    : `<button class="btn-finish-round" data-rn="${round.roundNum}">Salvar Rodada</button>`;
+            }
+
             container.innerHTML += `
                <div class="round-block">
                     <div class="round-header">
                         <h3>Rodada ${round.roundNum}</h3>
-                        ${allFinished 
-                            ? `<button class="btn-edit-round btn-secondary" data-rn="${round.roundNum}" style="padding:5px 12px;font-size:0.8rem;width:auto;">✏️ Editar</button>`
-                            : `<button class="btn-finish-round" data-rn="${round.roundNum}">Salvar Rodada</button>`
-                        }
+                        ${actionHtml}
                     </div>
                     ${matchesHtml}
                </div> 
