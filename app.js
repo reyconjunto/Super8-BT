@@ -493,6 +493,7 @@ const App = {
             dummyAlert.style.display = hasDummies ? 'block' : 'none';
         }
 
+        let globalMatchIndex = 0;
         App.state.tournament.rounds.forEach(round => {
             let matchesHtml = round.matches.map((match, mIndex) => {
                 let t1Name = '';
