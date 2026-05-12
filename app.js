@@ -61,9 +61,19 @@ const App = {
 
     saveState: () => {
         if (App.isViewMode) return;
-        localStorage.setItem('super8bt_state', JSON.stringify(App.state));
+        
+        try {
+            localStorage.setItem('super8bt_state', JSON.stringify(App.state));
+        } catch (e) {
+            console.error("Erro no localStorage:", e);
+        }
+
         if (App.state.tournamentId && db) {
-            db.ref('tournaments/' + App.state.tournamentId).set(App.state);
+            try {
+                db.ref('tournaments/' + App.state.tournamentId).set(App.state).catch(e => console.error("Firebase async error", e));
+            } catch (e) {
+                console.error("Erro síncrono no Firebase:", e);
+            }
         }
     },
 
@@ -118,7 +128,11 @@ const App = {
         // Reset
         document.getElementById('btn-reset-tournament').addEventListener('click', () => {
             if (confirm("Tem certeza que deseja apagar os dados e o andamento deste torneio?")) {
-                localStorage.removeItem('super8bt_state');
+                try {
+                    localStorage.removeItem('super8bt_state');
+                } catch (e) {
+                    console.error("Erro ao remover localStorage:", e);
+                }
                 location.reload();
             }
         });
