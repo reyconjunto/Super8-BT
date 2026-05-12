@@ -111,7 +111,7 @@ const IndividualMode = {
             let bestMatches = null;
             let bestPenalty = Infinity;
             
-            for (let iter = 0; iter < 50; iter++) {
+            for (let iter = 0; iter < 5000; iter++) {
                 let trial = Utils.shuffle([...selectedPlayers]);
                 let penalty = 0;
                 let matches = [];
