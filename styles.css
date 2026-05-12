@@ -388,6 +388,19 @@ p { font-size: 0.95rem; color: var(--sand-secondary); text-align: center; margin
     margin-top: 10px;
     padding-top: 10px;
     border-top: 1px dashed rgba(255,255,255,0.1);
+    position: relative;
+}
+
+.court-badge {
+    position: absolute;
+    left: 0;
+    background: var(--sunset-orange);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
 .score-input {
     width: 60px;

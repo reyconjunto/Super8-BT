@@ -6,7 +6,8 @@ const App = {
         numPlayers: 8,
         fixedPairs: [], 
         tournament: null, 
-        stats: {} 
+        stats: {},
+        numCourts: 2
     },
 
     init: () => {
@@ -145,6 +146,9 @@ const App = {
     goToPlayersScreen: () => {
         const numInput = document.getElementById('num-players-input');
         App.state.numPlayers = parseInt(numInput.value);
+
+        const numCourtsInput = document.getElementById('num-courts-input');
+        App.state.numCourts = parseInt(numCourtsInput.value) || 1;
 
         const modeRadio = document.querySelector('input[name="fixed_mode"]:checked');
         App.state.fixedRegistrationMode = (App.state.format === 'fixed' && modeRadio) ? modeRadio.value : 'individual';
@@ -411,7 +415,7 @@ const App = {
         }
 
         App.state.tournament.rounds.forEach(round => {
-            let matchesHtml = round.matches.map(match => {
+            let matchesHtml = round.matches.map((match, mIndex) => {
                 let t1Name = '';
                 let t2Name = '';
                 
@@ -428,6 +432,8 @@ const App = {
                     t2Name = match.t2.name;
                 }
 
+                let courtNum = (mIndex % (App.state.numCourts || 1)) + 1;
+
                 return `
                     <div class="match-card" id="${match.id}">
                         <div class="match-teams">
@@ -436,6 +442,7 @@ const App = {
                             <div class="team"><span>${t2Name}</span></div>
                         </div>
                         <div class="match-score">
+                            <div class="court-badge">Quadra ${courtNum}</div>
                             <input type="number" min="0" class="score-input s-out" data-mid="${match.id}" data-team="1" ${match.finished ? 'disabled' : ''} value="${match.score1 !== null ? match.score1 : ''}">
                             <span class="vs">X</span>
                             <input type="number" min="0" class="score-input s-out" data-mid="${match.id}" data-team="2" ${match.finished ? 'disabled' : ''} value="${match.score2 !== null ? match.score2 : ''}">
