@@ -28,6 +28,7 @@ const FixedDoubles = {
         return pairs.map((pair, index) => ({
             id: 'pair_' + index,
             name: `${pair[0].name} & ${pair[1].name}`,
+            isSeed: pair[0].isSeed || pair[1].isSeed,
             p1: pair[0],
             p2: pair[1]
         }));

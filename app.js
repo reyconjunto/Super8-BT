@@ -94,6 +94,12 @@ const App = {
         } else {
             document.getElementById('rank-name-col').innerText = 'Dupla';
         }
+        
+        const btnKnockout = document.getElementById('btn-generate-knockout');
+        if (btnKnockout) {
+            btnKnockout.style.display = (App.state.format === 'groups' && !App.isViewMode) ? 'inline-block' : 'none';
+        }
+
         App.renderRounds();
         App.renderRanking();
         App.switchScreen('tournament-screen');
@@ -103,7 +109,9 @@ const App = {
         // Format Setup
         document.getElementById('format-individual').addEventListener('click', () => App.selectFormat('individual'));
         document.getElementById('format-fixed').addEventListener('click', () => App.selectFormat('fixed'));
+        document.getElementById('format-groups').addEventListener('click', () => App.selectFormat('groups'));
         document.getElementById('num-players-input').addEventListener('input', App.validateFormatSetup);
+        document.getElementById('num-groups-input').addEventListener('input', App.validateFormatSetup);
         document.getElementById('btn-next-to-players').addEventListener('click', App.goToPlayersScreen);
 
         // Players setup
@@ -139,6 +147,12 @@ const App = {
 
         // Export
         document.getElementById('btn-export-csv').addEventListener('click', App.exportCSV);
+
+        // Knockout
+        const btnKnockout = document.getElementById('btn-generate-knockout');
+        if (btnKnockout) {
+            btnKnockout.addEventListener('click', App.generateKnockout);
+        }
 
         // Share
         const shareBtn = document.getElementById('btn-share-link');
@@ -186,8 +200,10 @@ const App = {
         const numInput = document.getElementById('num-players-input');
         const numHint = document.getElementById('num-players-hint');
         const fixedModeSel = document.getElementById('fixed-mode-selection');
+        const groupsSetup = document.getElementById('groups-setup');
         
         numSetup.style.display = 'block';
+        if (groupsSetup) groupsSetup.style.display = (formatType === 'groups') ? 'block' : 'none';
         
         if (formatType === 'individual') {
             numInput.value = 8;
@@ -211,8 +227,13 @@ const App = {
         
         if (App.state.format === 'individual') {
             btn.disabled = isNaN(val) || val < 4;
-        } else if (App.state.format === 'fixed') {
-            btn.disabled = isNaN(val) || val < 4 || val % 2 !== 0;
+        } else if (App.state.format === 'fixed' || App.state.format === 'groups') {
+            const numGroups = parseInt(document.getElementById('num-groups-input').value);
+            let validGroups = true;
+            if (App.state.format === 'groups') {
+                validGroups = !isNaN(numGroups) && numGroups >= 2;
+            }
+            btn.disabled = isNaN(val) || val < 4 || val % 2 !== 0 || !validGroups;
         } else {
             btn.disabled = true;
         }
@@ -224,9 +245,13 @@ const App = {
 
         const numCourtsInput = document.getElementById('num-courts-input');
         App.state.numCourts = parseInt(numCourtsInput.value) || 1;
+        
+        if (App.state.format === 'groups') {
+            App.state.numGroups = parseInt(document.getElementById('num-groups-input').value) || 2;
+        }
 
         const modeRadio = document.querySelector('input[name="fixed_mode"]:checked');
-        App.state.fixedRegistrationMode = (App.state.format === 'fixed' && modeRadio) ? modeRadio.value : 'individual';
+        App.state.fixedRegistrationMode = ((App.state.format === 'fixed' || App.state.format === 'groups') && modeRadio) ? modeRadio.value : 'individual';
 
         // Re-render inputs in case format changed
         App.renderPlayerInputs();
@@ -238,7 +263,7 @@ const App = {
         } else {
             if (App.state.fixedRegistrationMode === 'predefined') {
                 document.getElementById('players-title').innerText = `Elenco (${App.state.numPlayers/2} Duplas Prontas)`;
-                document.querySelector('#setup-players-screen p').innerHTML = 'Cadastre o nome de cada dupla.';
+                document.querySelector('#setup-players-screen p').innerHTML = 'Cadastre o nome de cada dupla. Marque a estrela ⭐ para sinalizar os <strong>Cabeças de Chave</strong>.';
             } else {
                 document.getElementById('players-title').innerText = `Elenco (${App.state.numPlayers} Jogadores / ${App.state.numPlayers/2} Duplas)`;
                 document.querySelector('#setup-players-screen p').innerHTML = 'Cadastre os jogadores. Marque a estrela ⭐ para sinalizar os <strong>Cabeças de Chave</strong>.';
@@ -253,13 +278,14 @@ const App = {
         const container = document.getElementById('players-list');
         container.innerHTML = '';
         
-        if (App.state.format === 'fixed' && App.state.fixedRegistrationMode === 'predefined') {
+        if ((App.state.format === 'fixed' || App.state.format === 'groups') && App.state.fixedRegistrationMode === 'predefined') {
             const numPairs = App.state.numPlayers / 2;
             for(let i=0; i<numPairs; i++) {
                 container.innerHTML += `
                     <div class="player-input-row">
                         <span class="player-num">${i+1}.</span>
                         <input type="text" class="p-input" data-index="${i}" placeholder="Nome da Dupla ${i+1} (ex: João & Maria)">
+                        <button class="seed-toggle" data-index="${i}" title="Marcar como Cabeça de Chave">⭐</button>
                     </div>
                 `;
             }
@@ -296,13 +322,16 @@ const App = {
         // Collect players or predefined pairs
         const inputs = document.querySelectorAll('.p-input');
         
-        if (App.state.format === 'fixed' && App.state.fixedRegistrationMode === 'predefined') {
+        if ((App.state.format === 'fixed' || App.state.format === 'groups') && App.state.fixedRegistrationMode === 'predefined') {
             App.state.fixedPairs = [];
+            const toggles = document.querySelectorAll('.seed-toggle');
             for(let i=0; i<inputs.length; i++) {
+                const isSeed = toggles[i] ? toggles[i].classList.contains('is-seed') : false;
                 App.state.fixedPairs.push({
                     id: `pair_${i}`,
                     name: inputs[i].value.trim(),
-                    p1: { name: inputs[i].value.trim(), isSeed: false }, 
+                    isSeed: isSeed,
+                    p1: { name: inputs[i].value.trim(), isSeed: isSeed }, 
                     p2: { name: '', isSeed: false }
                 });
             }
@@ -406,6 +435,7 @@ const App = {
             App.state.fixedPairs.push({
                 id: `pair_${i}`,
                 name: `${p1.name} & ${p2.name}`,
+                isSeed: p1.isSeed || p2.isSeed,
                 p1: p1,
                 p2: p2
             });
@@ -438,8 +468,11 @@ const App = {
         }
 
         if (App.state.format === 'individual') {
-            App.state.tournament = IndividualMode.generateRounds(App.state.players);
+            App.state.tournament = IndividualMode.generateRounds(App.state.players, App.state.numCourts);
             document.getElementById('rank-name-col').innerText = 'Jogador';
+        } else if (App.state.format === 'groups') {
+            App.state.tournament = GroupsMode.generateRounds(App.state.fixedPairs, App.state.numGroups, App.state.numCourts);
+            document.getElementById('rank-name-col').innerText = 'Dupla';
         } else {
             App.state.tournament = RoundRobin.generateSubArrays(App.state.fixedPairs);
             document.getElementById('rank-name-col').innerText = 'Dupla';
@@ -449,6 +482,35 @@ const App = {
         App.renderRounds();
         App.renderRanking();
         App.switchScreen('tournament-screen');
+        
+        const btnKnockout = document.getElementById('btn-generate-knockout');
+        if (btnKnockout) {
+            btnKnockout.style.display = (App.state.format === 'groups' && !App.isViewMode) ? 'inline-block' : 'none';
+        }
+    },
+
+    generateKnockout: () => {
+        let numStr = prompt("Quantas equipes se classificam para o mata-mata? (Ex: 2, 4, 8, 16)");
+        if (!numStr) return;
+        
+        let numTeams = parseInt(numStr);
+        if (isNaN(numTeams) || numTeams < 2) {
+            alert("Número inválido. O mínimo de equipes é 2.");
+            return;
+        }
+
+        let statsArray = Object.values(App.state.stats);
+        let koRound = GroupsMode.generateKnockout(statsArray, App.state.tournament.groups, numTeams);
+        
+        // Atribuir um número de rodada sequencial
+        koRound.roundNum = App.state.tournament.rounds.length + 1;
+        
+        App.state.tournament.rounds.push(koRound);
+        App.saveState();
+        App.renderRounds();
+        
+        // Rolar até o fim para ver a nova rodada
+        document.getElementById('rounds-container').scrollIntoView({ behavior: 'smooth', block: 'end' });
     },
 
     initStats: () => {
@@ -516,9 +578,11 @@ const App = {
                 globalMatchIndex++;
 
                 let isReadonly = App.isViewMode || match.finished ? 'disabled' : '';
+                let groupLabel = match.groupName ? `<div style="font-size:0.75rem; color:var(--sunset-yellow); margin-bottom:5px; font-weight:bold;">[${match.groupName}]</div>` : '';
 
                 return `
                     <div class="match-card" id="${match.id}">
+                        ${groupLabel}
                         <div class="match-teams">
                             <div class="team"><span>${t1Name}</span></div>
                             <div class="vs-badge">VS</div>
@@ -543,10 +607,12 @@ const App = {
                     : `<button class="btn-finish-round" data-rn="${round.roundNum}">Salvar Rodada</button>`;
             }
 
+            let roundTitle = round.isKnockout ? `🏆 ${round.knockoutLabel}` : `Rodada ${round.roundNum}`;
+
             container.innerHTML += `
                <div class="round-block">
                     <div class="round-header">
-                        <h3>Rodada ${round.roundNum}</h3>
+                        <h3>${roundTitle}</h3>
                         ${actionHtml}
                     </div>
                     ${matchesHtml}
@@ -602,9 +668,65 @@ const App = {
             return;
         }
 
+        // Auto-generate next knockout phase if applicable
+        if (round.isKnockout && round.matches.length > 1) {
+            let nextPhaseTeams = [];
+            let nextPhaseLosers = [];
+            
+            // Collect winners and losers
+            round.matches.forEach(m => {
+                if (m.score1 > m.score2) {
+                    nextPhaseTeams.push(m.t1);
+                    nextPhaseLosers.push(m.t2);
+                } else if (m.score2 > m.score1) {
+                    nextPhaseTeams.push(m.t2);
+                    nextPhaseLosers.push(m.t1);
+                } else {
+                    nextPhaseTeams.push(m.t1); // In case of tie, t1 advances (fallback)
+                    nextPhaseLosers.push(m.t2);
+                }
+            });
+
+            let nextMatches = [];
+            let nextMatchCount = nextPhaseTeams.length / 2;
+            let nextLabel = "Fase Final";
+            if (nextMatchCount === 1) nextLabel = "Final";
+            else if (nextMatchCount === 2) nextLabel = "Semifinal";
+            else if (nextMatchCount === 4) nextLabel = "Quartas de Final";
+
+            for (let i = 0; i < nextMatchCount; i++) {
+                nextMatches.push({
+                    id: `ko_prog_${round.roundNum}_${i}`,
+                    t1: nextPhaseTeams[i * 2],
+                    t2: nextPhaseTeams[i * 2 + 1],
+                    score1: null,
+                    score2: null,
+                    finished: false,
+                    groupName: nextLabel
+                });
+            }
+
+            let newRound = {
+                roundNum: App.state.tournament.rounds.length + 1,
+                matches: nextMatches,
+                isKnockout: true,
+                knockoutLabel: nextLabel
+            };
+            App.state.tournament.rounds.push(newRound);
+        }
+
         App.saveState();
         App.renderRounds(); 
-        App.switchTab('tab-ranking');
+        
+        // If it was a knockout round, we stay on matches tab to see the next phase
+        if (!round.isKnockout) {
+            App.switchTab('tab-ranking');
+        } else {
+            // Scroll to bottom
+            setTimeout(() => {
+                document.getElementById('rounds-container').scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }, 100);
+        }
     },
 
     editRound: (roundNum) => {
@@ -645,25 +767,135 @@ const App = {
     // --- RANKING ---
     renderRanking: () => {
         let statsArray = Object.values(App.state.stats);
-        statsArray = Scoring.sortRanking(statsArray);
+        const container = document.getElementById('ranking-container');
+        
+        if (App.state.format === 'groups') {
+            container.innerHTML = '';
 
-        const tbody = document.getElementById('ranking-body');
-        tbody.innerHTML = '';
+            // Pódio Final
+            if (App.state.tournament && App.state.tournament.rounds) {
+                let finalMatch = App.state.tournament.rounds.flatMap(r => r.matches).find(m => m.groupName === 'Final' && m.finished);
+                let semiRound = App.state.tournament.rounds.find(r => r.knockoutLabel === 'Semifinal');
 
-        statsArray.forEach((stat, index) => {
-            let medal = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : ''));
-            let finalScore = (stat.wins * 10) + stat.sg;
-            tbody.innerHTML += `
-               <tr>
-                    <td>${index + 1}</td>
-                    <td class="player-name">${stat.obj.name} <span class="medal">${medal}</span></td>
-                    <td><strong>${finalScore}</strong></td>
-                    <td>${stat.wins}</td>
-                    <td>${stat.sg}</td>
-                    <td>${stat.pro}</td>
-               </tr> 
+                if (finalMatch) {
+                    let first = finalMatch.score1 > finalMatch.score2 ? finalMatch.t1.name : finalMatch.t2.name;
+                    let second = finalMatch.score1 > finalMatch.score2 ? finalMatch.t2.name : finalMatch.t1.name;
+                    let third = "";
+
+                    if (semiRound) {
+                        let semiLosers = [];
+                        semiRound.matches.forEach(m => {
+                            if (m.finished) {
+                                if (m.score1 > m.score2) semiLosers.push(m.t2);
+                                else if (m.score2 > m.score1) semiLosers.push(m.t1);
+                                else semiLosers.push(m.t2);
+                            }
+                        });
+
+                        if (semiLosers.length >= 2) {
+                            let loserStats = semiLosers.map(t => App.state.stats[t.id]).filter(s => s);
+                            loserStats = Scoring.sortRanking(loserStats);
+                            if (loserStats.length > 0) {
+                                third = loserStats[0].obj.name;
+                            }
+                        }
+                    }
+
+                    container.innerHTML += `
+                        <div class="glass-card pd-0" style="margin-bottom: 25px;">
+                            <h3 style="color: var(--sunset-yellow); margin-top: 15px; margin-bottom: 10px; text-align:center; font-size: 1.5rem;">🏆 Pódio Final</h3>
+                            <table class="ranking-table" style="margin-bottom: 15px;">
+                                <tbody>
+                                    <tr style="background: rgba(255, 215, 0, 0.15);"><td style="width: 60px; font-size: 1.8rem; text-align:center; border:none;">🥇</td><td class="player-name" style="font-weight: bold; font-size: 1.2rem; border:none;">${first}</td></tr>
+                                    <tr style="background: rgba(192, 192, 192, 0.1);"><td style="width: 60px; font-size: 1.8rem; text-align:center; border:none;">🥈</td><td class="player-name" style="font-weight: bold; font-size: 1.2rem; border:none;">${second}</td></tr>
+                                    ${third ? `<tr style="background: rgba(205, 127, 50, 0.1);"><td style="width: 60px; font-size: 1.8rem; text-align:center; border:none;">🥉</td><td class="player-name" style="font-weight: bold; font-size: 1.2rem; border:none;">${third}</td></tr>` : ''}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                }
+            }
+
+            App.state.tournament.groups.forEach(group => {
+                let groupStats = statsArray.filter(s => group.participants.find(p => p.id === s.obj.id));
+                groupStats = Scoring.sortRanking(groupStats);
+                
+                let tbodyHtml = '';
+                groupStats.forEach((stat, index) => {
+                    let medal = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : ''));
+                    let finalScore = (stat.wins * 10) + stat.sg;
+                    tbodyHtml += `
+                       <tr>
+                            <td>${index + 1}</td>
+                            <td class="player-name">${stat.obj.name} <span class="medal">${medal}</span></td>
+                            <td><strong>${finalScore}</strong></td>
+                            <td>${stat.wins}</td>
+                            <td>${stat.sg}</td>
+                            <td>${stat.pro}</td>
+                       </tr> 
+                    `;
+                });
+                
+                container.innerHTML += `
+                    <h3 style="color: var(--sunset-yellow); margin-top: 20px; margin-bottom: 10px;">${group.name}</h3>
+                    <div class="glass-card pd-0">
+                        <table class="ranking-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Dupla</th>
+                                    <th title="Pontuação Total">Pts</th>
+                                    <th title="Vitórias">V</th>
+                                    <th title="Saldo de Games">SG</th>
+                                    <th title="Games Pró">Pró</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${tbodyHtml}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            });
+        } else {
+            statsArray = Scoring.sortRanking(statsArray);
+            
+            let tbodyHtml = '';
+            statsArray.forEach((stat, index) => {
+                let medal = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : ''));
+                let finalScore = (stat.wins * 10) + stat.sg;
+                tbodyHtml += `
+                   <tr>
+                        <td>${index + 1}</td>
+                        <td class="player-name">${stat.obj.name} <span class="medal">${medal}</span></td>
+                        <td><strong>${finalScore}</strong></td>
+                        <td>${stat.wins}</td>
+                        <td>${stat.sg}</td>
+                        <td>${stat.pro}</td>
+                   </tr> 
+                `;
+            });
+            
+            container.innerHTML = `
+                <div class="glass-card pd-0">
+                    <table class="ranking-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>${App.state.format === 'individual' ? 'Jogador' : 'Dupla'}</th>
+                                <th title="Pontuação Total">Pts</th>
+                                <th title="Vitórias">V</th>
+                                <th title="Saldo de Games">SG</th>
+                                <th title="Games Pró">Pró</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${tbodyHtml}
+                        </tbody>
+                    </table>
+                </div>
             `;
-        });
+        }
     },
 
     exportCSV: () => {
