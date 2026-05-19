@@ -64,6 +64,12 @@
                     <input type="number" id="num-courts-input" class="large-number-input" value="2" min="1">
                     <p style="font-size: 0.9rem; margin-top: 15px; margin-bottom: 0; color: var(--sand-secondary);">Quantas quadras estarão disponíveis simultaneamente.</p>
                     
+                    <div id="individual-setup" style="display: none; margin-top: 15px; text-align: left; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px;">
+                        <label for="max-matches-input" style="font-weight: 700; font-size: 1.1rem; display: block; margin-bottom: 10px; color: var(--sunset-yellow);">Nº Máximo de Partidas por Atleta</label>
+                        <input type="number" id="max-matches-input" class="large-number-input" value="" min="1" placeholder="Sem limite">
+                        <p style="font-size: 0.9rem; margin-top: 10px; margin-bottom: 0; color: var(--sand-secondary);">Limite opcional de jogos por jogador (útil para torneios rápidos de tiro curto).</p>
+                    </div>
+
                     <div id="fixed-mode-selection" style="display: none; margin-top: 15px; text-align: left; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px;">
                         <p style="color: var(--sunset-yellow); margin-bottom: 10px; font-weight: 600;">Como deseja cadastrar?</p>
                         <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px; cursor: pointer; color: var(--sand-primary);">

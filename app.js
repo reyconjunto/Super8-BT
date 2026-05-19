@@ -25,7 +25,8 @@ const App = {
         fixedPairs: [], 
         tournament: null, 
         stats: {},
-        numCourts: 2
+        numCourts: 2,
+        maxMatchesPerPlayer: null
     },
 
     init: () => {
@@ -206,6 +207,9 @@ const App = {
         numSetup.style.display = 'block';
         if (groupsSetup) groupsSetup.style.display = (formatType === 'groups') ? 'block' : 'none';
         
+        const individualSetup = document.getElementById('individual-setup');
+        if (individualSetup) individualSetup.style.display = (formatType === 'individual') ? 'block' : 'none';
+        
         if (formatType === 'individual') {
             numInput.value = 8;
             numInput.step = 1;
@@ -246,6 +250,13 @@ const App = {
 
         const numCourtsInput = document.getElementById('num-courts-input');
         App.state.numCourts = parseInt(numCourtsInput.value) || 1;
+        
+        const maxMatchesInput = document.getElementById('max-matches-input');
+        if (maxMatchesInput && App.state.format === 'individual') {
+            App.state.maxMatchesPerPlayer = parseInt(maxMatchesInput.value) || null;
+        } else {
+            App.state.maxMatchesPerPlayer = null;
+        }
         
         if (App.state.format === 'groups') {
             App.state.numGroups = parseInt(document.getElementById('num-groups-input').value) || 2;
@@ -469,7 +480,7 @@ const App = {
         }
 
         if (App.state.format === 'individual') {
-            App.state.tournament = IndividualMode.generateRounds(App.state.players, App.state.numCourts);
+            App.state.tournament = IndividualMode.generateRounds(App.state.players, App.state.numCourts, App.state.maxMatchesPerPlayer);
             document.getElementById('rank-name-col').innerText = 'Jogador';
         } else if (App.state.format === 'groups') {
             App.state.tournament = GroupsMode.generateRounds(App.state.fixedPairs, App.state.numGroups, App.state.numCourts);

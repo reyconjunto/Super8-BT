@@ -13,18 +13,40 @@ const IndividualMode = {
         [ [0,7, 3,4], [1,6, 2,5] ]  // Rodada 7
     ],
 
+    // Matriz perfeita para 9 jogadores (cada um joga 8 partidas, sem repetir parceiro)
+    MATRIX_9: [
+        [ [0,1, 2,5], [3,7, 4,6] ], // Rodada 1, descansa 8
+        [ [1,2, 3,6], [4,8, 5,7] ], // Rodada 2, descansa 0
+        [ [2,3, 4,7], [5,0, 6,8] ], // Rodada 3, descansa 1
+        [ [3,4, 5,8], [6,1, 7,0] ], // Rodada 4, descansa 2
+        [ [4,5, 6,0], [7,2, 8,1] ], // Rodada 5, descansa 3
+        [ [5,6, 7,1], [8,3, 0,2] ], // Rodada 6, descansa 4
+        [ [6,7, 8,2], [0,4, 1,3] ], // Rodada 7, descansa 5
+        [ [7,8, 0,3], [1,5, 2,4] ], // Rodada 8, descansa 6
+        [ [8,0, 1,4], [2,6, 3,5] ]  // Rodada 9, descansa 7
+    ],
+
     // Gera a tabela do torneio Individual 
     // Recebe o array de jogadores (já sorteados ou na ordem da tela)
-    generateRounds: (players) => {
+    generateRounds: (players, requestedCourts, maxMatchesPerPlayer) => {
         let rounds = [];
         let numPlayers = players.length;
-        let numCourts = Math.floor(numPlayers / 4);
+        
+        // Define numCourts baseado no input do usuário com proteção contra valores absurdos
+        let maxCourts = Math.floor(numPlayers / 4);
+        let numCourts = requestedCourts && requestedCourts > 0 ? requestedCourts : maxCourts;
+        if (numCourts > maxCourts) numCourts = maxCourts;
+        if (numCourts < 1) numCourts = 1;
         
         let shuffledPlayers = Utils.shuffle([...players]);
         
-        if (numPlayers === 8) {
-            // Usa matriz perfeita para 8 jogadores
-            IndividualMode.MATRIX_8.forEach((roundMatrix, rIndex) => {
+        // Se houver limite de partidas menor que o padrão, não usamos a matriz fixa de 8 ou 9
+        let hasLimit = maxMatchesPerPlayer && maxMatchesPerPlayer > 0 && maxMatchesPerPlayer < (numPlayers - 1);
+        
+        if ((numPlayers === 8 || numPlayers === 9) && !hasLimit) {
+            // Usa matriz perfeita para 8 ou 9 jogadores
+            let matrixToUse = numPlayers === 8 ? IndividualMode.MATRIX_8 : IndividualMode.MATRIX_9;
+            matrixToUse.forEach((roundMatrix, rIndex) => {
                 let matches = [];
                 roundMatrix.forEach((matchIndices, mIndex) => {
                     matches.push({
@@ -50,8 +72,8 @@ const IndividualMode = {
         }
 
         // Lógica "Rei da Praia" para N jogadores (qualquer número >= 4)
-        // Regra: Todos jogam N-1 partidas. Vagas excedentes serão preenchidas por "Dummies" (Curingas).
-        let targetMatches = numPlayers - 1; 
+        // Regra: Todos jogam targetMatches partidas. Vagas excedentes serão preenchidas por "Dummies" (Curingas).
+        let targetMatches = hasLimit ? maxMatchesPerPlayer : (numPlayers - 1); 
         
         let totalSlotsNeeded = numPlayers * targetMatches;
         let numRounds = Math.ceil(totalSlotsNeeded / (4 * numCourts));
