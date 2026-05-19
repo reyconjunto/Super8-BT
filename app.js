@@ -147,6 +147,7 @@ const App = {
 
         // Export
         document.getElementById('btn-export-csv').addEventListener('click', App.exportCSV);
+        document.getElementById('btn-export-whatsapp').addEventListener('click', App.exportWhatsApp);
 
         // Knockout
         const btnKnockout = document.getElementById('btn-generate-knockout');
@@ -910,7 +911,6 @@ const App = {
             csvContent += `${index + 1},"${name}",${finalScore},${stat.wins},${stat.sg},${stat.pro}\n`;
         });
         
-        // Add BOM for Excel UTF-8 compatibility
         const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -919,6 +919,63 @@ const App = {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    },
+
+    exportWhatsApp: () => {
+        if (!App.state.tournament || !App.state.tournament.rounds) {
+            alert('Não há jogos para exportar.');
+            return;
+        }
+
+        let text = `🎾 *Resultados do Torneio* 🎾\n\n`;
+
+        App.state.tournament.rounds.forEach(round => {
+            text += `🏆 *Rodada ${round.roundNum}*\n`;
+            
+            round.matches.forEach((match, mIndex) => {
+                let t1Name = '';
+                let t2Name = '';
+                
+                if (App.state.format === 'individual') {
+                    const dummies = match.dummies || [];
+                    let p1 = dummies.includes(match.t1[0].id) ? `${match.t1[0].name} 🃏` : match.t1[0].name;
+                    let p2 = dummies.includes(match.t1[1].id) ? `${match.t1[1].name} 🃏` : match.t1[1].name;
+                    let p3 = dummies.includes(match.t2[0].id) ? `${match.t2[0].name} 🃏` : match.t2[0].name;
+                    let p4 = dummies.includes(match.t2[1].id) ? `${match.t2[1].name} 🃏` : match.t2[1].name;
+                    t1Name = `${p1} & ${p2}`;
+                    t2Name = `${p3} & ${p4}`;
+                } else {
+                    t1Name = match.t1.name;
+                    t2Name = match.t2.name;
+                }
+
+                let s1 = match.score1 !== null ? match.score1 : '-';
+                let s2 = match.score2 !== null ? match.score2 : '-';
+                
+                // Marca quem venceu se o jogo tiver acabado (opcional, deixar negrito)
+                let t1Display = t1Name;
+                let t2Display = t2Name;
+                
+                if (match.score1 !== null && match.score2 !== null) {
+                    if (match.score1 > match.score2) {
+                        t1Display = `*${t1Name}*`;
+                    } else if (match.score2 > match.score1) {
+                        t2Display = `*${t2Name}*`;
+                    }
+                }
+
+                text += `${t1Display}  ${s1} x ${s2}  ${t2Display}\n`;
+            });
+            text += `\n`;
+        });
+
+        // Tentar copiar para o clipboard
+        navigator.clipboard.writeText(text).then(() => {
+            alert('Resultados copiados! Cole no WhatsApp.');
+        }).catch(err => {
+            alert('Não foi possível copiar automaticamente. Selecione e copie o texto abaixo:\n\n' + text);
+            console.error(err);
+        });
     }
 };
 
