@@ -40,8 +40,14 @@ const Scoring = {
             // 3. Saldo de games
             if (b.sg !== a.sg) return b.sg - a.sg;
             
-            // 4. Games pro
-            if (b.pro !== a.pro) return b.pro - a.pro;
+            // 4. Aproveitamento (% de Games Ganhos)
+            let totalA = (2 * a.pro) - a.sg;
+            let effA = totalA > 0 ? (a.pro / totalA) : 0;
+            
+            let totalB = (2 * b.pro) - b.sg;
+            let effB = totalB > 0 ? (b.pro / totalB) : 0;
+            
+            if (effB !== effA) return effB - effA;
             
             // 5. Menos jogos disputados (eficiência)
             let matchesA = a.matches || 0;
