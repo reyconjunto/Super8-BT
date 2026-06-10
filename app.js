@@ -495,6 +495,12 @@ const App = {
         App.renderRanking();
         App.switchScreen('tournament-screen');
         
+        if (App.state.format === 'groups') {
+            App.switchTab('tab-ranking');
+        } else {
+            App.switchTab('tab-matches');
+        }
+        
         const btnKnockout = document.getElementById('btn-generate-knockout');
         if (btnKnockout) {
             btnKnockout.style.display = (App.state.format === 'groups' && !App.isViewMode) ? 'inline-block' : 'none';
@@ -529,11 +535,11 @@ const App = {
         App.state.stats = {};
         if (App.state.format === 'individual') {
             App.state.players.forEach(p => {
-                App.state.stats[p.id] = { obj: p, wins: 0, sg: 0, pro: 0 };
+                App.state.stats[p.id] = { obj: p, wins: 0, sg: 0, pro: 0, matches: 0 };
             });
         } else {
             App.state.fixedPairs.forEach(p => {
-                App.state.stats[p.id] = { obj: p, wins: 0, sg: 0, pro: 0 };
+                App.state.stats[p.id] = { obj: p, wins: 0, sg: 0, pro: 0, matches: 0 };
             });
         }
     },
@@ -664,13 +670,13 @@ const App = {
                 
                 if (App.state.format === 'individual') {
                     const dummies = match.dummies || [];
-                    if (!dummies.includes(match.t1[0].id)) App.addStatsToPlayer(match.t1[0].id, res.winsA, res.sgA, res.proA);
-                    if (!dummies.includes(match.t1[1].id)) App.addStatsToPlayer(match.t1[1].id, res.winsA, res.sgA, res.proA);
-                    if (!dummies.includes(match.t2[0].id)) App.addStatsToPlayer(match.t2[0].id, res.winsB, res.sgB, res.proB);
-                    if (!dummies.includes(match.t2[1].id)) App.addStatsToPlayer(match.t2[1].id, res.winsB, res.sgB, res.proB);
+                    if (!dummies.includes(match.t1[0].id)) App.addStatsToPlayer(match.t1[0].id, res.winsA, res.sgA, res.proA, 1);
+                    if (!dummies.includes(match.t1[1].id)) App.addStatsToPlayer(match.t1[1].id, res.winsA, res.sgA, res.proA, 1);
+                    if (!dummies.includes(match.t2[0].id)) App.addStatsToPlayer(match.t2[0].id, res.winsB, res.sgB, res.proB, 1);
+                    if (!dummies.includes(match.t2[1].id)) App.addStatsToPlayer(match.t2[1].id, res.winsB, res.sgB, res.proB, 1);
                 } else {
-                    App.addStatsToPlayer(match.t1.id, res.winsA, res.sgA, res.proA);
-                    App.addStatsToPlayer(match.t2.id, res.winsB, res.sgB, res.proB);
+                    App.addStatsToPlayer(match.t1.id, res.winsA, res.sgA, res.proA, 1);
+                    App.addStatsToPlayer(match.t2.id, res.winsB, res.sgB, res.proB, 1);
                 }
             }
         });
@@ -752,13 +758,13 @@ const App = {
             
             if (App.state.format === 'individual') {
                 const dummies = match.dummies || [];
-                if (!dummies.includes(match.t1[0].id)) App.addStatsToPlayer(match.t1[0].id, -res.winsA, -res.sgA, -res.proA);
-                if (!dummies.includes(match.t1[1].id)) App.addStatsToPlayer(match.t1[1].id, -res.winsA, -res.sgA, -res.proA);
-                if (!dummies.includes(match.t2[0].id)) App.addStatsToPlayer(match.t2[0].id, -res.winsB, -res.sgB, -res.proB);
-                if (!dummies.includes(match.t2[1].id)) App.addStatsToPlayer(match.t2[1].id, -res.winsB, -res.sgB, -res.proB);
+                if (!dummies.includes(match.t1[0].id)) App.addStatsToPlayer(match.t1[0].id, -res.winsA, -res.sgA, -res.proA, -1);
+                if (!dummies.includes(match.t1[1].id)) App.addStatsToPlayer(match.t1[1].id, -res.winsA, -res.sgA, -res.proA, -1);
+                if (!dummies.includes(match.t2[0].id)) App.addStatsToPlayer(match.t2[0].id, -res.winsB, -res.sgB, -res.proB, -1);
+                if (!dummies.includes(match.t2[1].id)) App.addStatsToPlayer(match.t2[1].id, -res.winsB, -res.sgB, -res.proB, -1);
             } else {
-                App.addStatsToPlayer(match.t1.id, -res.winsA, -res.sgA, -res.proA);
-                App.addStatsToPlayer(match.t2.id, -res.winsB, -res.sgB, -res.proB);
+                App.addStatsToPlayer(match.t1.id, -res.winsA, -res.sgA, -res.proA, -1);
+                App.addStatsToPlayer(match.t2.id, -res.winsB, -res.sgB, -res.proB, -1);
             }
             
             match.finished = false;
@@ -769,11 +775,12 @@ const App = {
         App.renderRanking();
     },
 
-    addStatsToPlayer: (id, wins, sg, pro) => {
+    addStatsToPlayer: (id, wins, sg, pro, matches) => {
         if (!App.state.stats[id]) return;
         App.state.stats[id].wins += wins;
         App.state.stats[id].sg += sg;
         App.state.stats[id].pro += pro;
+        App.state.stats[id].matches += matches;
     },
 
     // --- RANKING ---

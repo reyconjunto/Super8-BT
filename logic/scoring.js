@@ -43,6 +43,11 @@ const Scoring = {
             // 4. Games pro
             if (b.pro !== a.pro) return b.pro - a.pro;
             
+            // 5. Menos jogos disputados (eficiência)
+            let matchesA = a.matches || 0;
+            let matchesB = b.matches || 0;
+            if (matchesA !== matchesB) return matchesA - matchesB; // Menor é melhor
+            
             return 0; // Empate total
         });
     }
