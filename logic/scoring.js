@@ -54,6 +54,11 @@ const Scoring = {
             let matchesB = b.matches || 0;
             if (matchesA !== matchesB) return matchesA - matchesB; // Menor é melhor
             
+            // 6. Cabeça de chave (Seed)
+            let seedA = (a.obj && a.obj.isSeed) ? 1 : 0;
+            let seedB = (b.obj && b.obj.isSeed) ? 1 : 0;
+            if (seedB !== seedA) return seedB - seedA;
+            
             return 0; // Empate total
         });
     }

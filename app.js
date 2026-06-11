@@ -846,7 +846,11 @@ const App = {
                     tbodyHtml += `
                        <tr>
                             <td>${index + 1}</td>
-                            <td class="player-name">${stat.obj.name} <span class="medal">${medal}</span></td>
+                            <td class="player-name">
+                                ${stat.obj.name} 
+                                ${!App.isViewMode ? `<button class="btn-edit-name" data-id="${stat.obj.id}" style="background:none; border:none; cursor:pointer; font-size:0.8rem; margin-left:5px;" title="Editar Nome">✏️</button>` : ''}
+                                <span class="medal">${medal}</span>
+                            </td>
                             <td><strong>${finalScore}</strong></td>
                             <td>${stat.wins}</td>
                             <td>${stat.sg}</td>
@@ -886,7 +890,11 @@ const App = {
                 tbodyHtml += `
                    <tr>
                         <td>${index + 1}</td>
-                        <td class="player-name">${stat.obj.name} <span class="medal">${medal}</span></td>
+                        <td class="player-name">
+                            ${stat.obj.name} 
+                            ${!App.isViewMode ? `<button class="btn-edit-name" data-id="${stat.obj.id}" style="background:none; border:none; cursor:pointer; font-size:0.8rem; margin-left:5px;" title="Editar Nome">✏️</button>` : ''}
+                            <span class="medal">${medal}</span>
+                        </td>
                         <td><strong>${finalScore}</strong></td>
                         <td>${stat.wins}</td>
                         <td>${stat.sg}</td>
@@ -915,6 +923,40 @@ const App = {
                 </div>
             `;
         }
+        
+        document.querySelectorAll('.btn-edit-name').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                App.editPlayerName(e.currentTarget.dataset.id);
+            });
+        });
+    },
+
+    editPlayerName: (id) => {
+        if (App.isViewMode) return;
+        const stat = App.state.stats[id];
+        if (!stat) return;
+        
+        let oldName = stat.obj.name;
+        let newName = prompt("Corrigir nome:", oldName);
+        if (!newName || newName.trim() === '' || newName.trim() === oldName) return;
+        newName = newName.trim();
+
+        const updateNameInObj = (obj) => {
+            if (!obj || typeof obj !== 'object') return;
+            if (obj.id === id && obj.name !== undefined) {
+                obj.name = newName;
+            }
+            for (let key in obj) {
+                if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                    updateNameInObj(obj[key]);
+                }
+            }
+        };
+
+        updateNameInObj(App.state);
+        App.saveState();
+        App.renderRounds();
+        App.renderRanking();
     },
 
     exportCSV: () => {
