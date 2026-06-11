@@ -149,6 +149,9 @@ const App = {
         // Export
         document.getElementById('btn-export-csv').addEventListener('click', App.exportCSV);
         document.getElementById('btn-export-whatsapp').addEventListener('click', App.exportWhatsApp);
+        document.querySelectorAll('.btn-print').forEach(btn => {
+            btn.addEventListener('click', () => window.print());
+        });
 
         // Knockout
         const btnKnockout = document.getElementById('btn-generate-knockout');

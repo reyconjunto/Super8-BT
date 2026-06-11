@@ -482,3 +482,44 @@ p { font-size: 0.95rem; color: var(--sand-secondary); text-align: center; margin
 
 /* Utility */
 .mt-4 { margin-top: 20px; }
+
+/* Print Styles */
+@media print {
+    body, .app-container, .background-overlay, .screen, .tab-content {
+        background: white !important;
+        color: black !important;
+        box-shadow: none !important;
+    }
+    .background-overlay {
+        display: none !important;
+    }
+    .app-header, .tournament-tabs, button, .btn, .admin-only {
+        display: none !important;
+    }
+    .glass-card, .match-card, .round-block {
+        background: transparent !important;
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+        color: black !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+    .ranking-table th, .ranking-table td {
+        border-bottom: 1px solid #ccc !important;
+        color: black !important;
+    }
+    .ranking-table th {
+        background: #f0f0f0 !important;
+    }
+    h2, h3, p, span, div, strong {
+        color: black !important;
+    }
+    .score-input {
+        background: transparent !important;
+        color: black !important;
+        border: 1px solid #ccc !important;
+    }
+    #view-mode-banner, #individual-dummy-alert {
+        display: none !important;
+    }
+}
