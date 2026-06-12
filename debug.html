@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script src="logic/utils.js"></script>
+<script src="logic/individual_mode.js"></script>
+<script>
+    let players = [];
+    for(let i=0; i<12; i++) {
+        players.push({id: 'p_'+i, name: 'P'+i, isSeed: false});
+    }
+    try {
+        console.log("Generating rounds...");
+        let t0 = performance.now();
+        let result = IndividualMode.generateRounds(players);
+        let t1 = performance.now();
+        console.log("Success! Rounds:", result.rounds.length, "Time:", (t1-t0).toFixed(2)+"ms");
+        document.body.innerHTML = "<h1>Success! Time: " + (t1-t0).toFixed(2) + "ms</h1>";
+    } catch(e) {
+        console.error(e);
+        document.body.innerHTML = "<h1>Error: " + e.message + "</h1><pre>" + e.stack + "</pre>";
+    }
+</script>
+</body>
+</html>

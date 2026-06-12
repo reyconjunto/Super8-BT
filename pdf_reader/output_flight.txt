@@ -1,0 +1,265 @@
+--- PAGE ---
+07 AGO 2026 
+  16 AGO 2026 VIAGEM PARA MIAMI INTERNTNL, FL
+ 
+RODRIGO FORTES 
+SILVANA UJVARI 
+TAIS FORTES 
+CÓDIGO DA RESERVA   
+MJRWLT
+Código localizador da parceira
+ 
+OAQCUK (AA)
+ 
+SAÍDA: 
+SEXTA-FEIRA 
+07 AGO 
+Por favor, verifique o horário da decolagem dos
+voos.
+GOL LINHAS AEREAS 
+G3 1239
+Duração:
+2hr(s) 0min(s)
+Família de tarifas:
+CLASSIC
+Cabine:
+Econômica 
+/ B
+POA
+PORTO
+ 
+ALEGRE,
+ 
+BRASIL
+GRU
+GUARULHOS,
+ 
+BRASIL
+Aeronave:
+BOEING 737-800 JET
+Partindo às:
+18:25
+Terminal:
+TERMINAL 1
+Chegando às:
+20:25
+Terminal:
+TERMINAL 2
+Nome
+ 
+do
+ 
+passageiro:
+Assentos:
+Recibo(s)
+ 
+de
+ 
+Bilhete(s)
+ 
+Eletrônico(s):
+» 
+Rodrigo Fortes
+01D
+1272149921931 
+» 
+Silvana Ujvari
+01E
+1272149921932 
+» 
+Tais Fortes
+01F
+1272149921933 
+ 
+SAÍDA: 
+SEXTA-FEIRA 
+07 AGO
+CHEGADA: 
+SÁBADO 
+08 AGO
+Por favor, verifique o horário da decolagem dos
+voos.
+GOL LINHAS AEREAS 
+G3 6006
+Operado por:
+AMERICAN AIRLINES
+Duração:
+8hr(s) 20min(s)
+Família de tarifas:
+CLASSIC
+Cabine:
+Econômica 
+/ B
+GRU
+GUARULHOS,
+ 
+BRASIL
+MIA
+MIAMI
+ 
+INTERNTNL,
+ 
+FL
+Aeronave:
+BOEING 787-8 JET
+Partindo às:
+23:15
+(Sex, ago 7)
+Terminal:
+TERMINAL 3
+Chegando às:
+06:35
+(Sáb, ago 8)
+Terminal:
+Não disponível
+Nome
+ 
+do
+ 
+passageiro:
+Assentos:
+Recibo(s)
+ 
+de
+ 
+Bilhete(s)
+ 
+Eletrônico(s):
+» 
+Rodrigo Fortes
+Não confirmado
+1272149921931 
+» 
+Silvana Ujvari
+Não confirmado
+1272149921932 
+» 
+Tais Fortes
+Não confirmado
+1272149921933 
+--- PAGE ---
+ 
+SAÍDA: 
+SÁBADO 
+15 AGO
+CHEGADA: 
+DOMINGO 
+16 AGO
+Por favor, verifique o horário da decolagem dos
+voos.
+GOL LINHAS AEREAS 
+G3 7749
+Duração:
+7hr(s) 45min(s)
+Família de tarifas:
+FLEX
+Cabine:
+Econômica 
+/ O
+MIA
+MIAMI
+ 
+INTERNTNL,
+ 
+FL
+BSB
+BRASILIA,
+ 
+BRASIL
+Aeronave:
+BOEING 737 MAX
+Partindo às:
+22:30
+(Sáb, ago 15)
+Terminal:
+Não disponível
+Chegando às:
+07:15
+(Dom, ago 16)
+Terminal:
+Não disponível
+Nome
+ 
+do
+ 
+passageiro:
+Assentos:
+Recibo(s)
+ 
+de
+ 
+Bilhete(s)
+ 
+Eletrônico(s):
+» 
+Rodrigo Fortes
+Não confirmado
+1272149921931 
+» 
+Silvana Ujvari
+Não confirmado
+1272149921932 
+» 
+Tais Fortes
+Não confirmado
+1272149921933 
+ 
+SAÍDA: 
+DOMINGO 
+16 AGO 
+Por favor, verifique o horário da decolagem dos
+voos.
+GOL LINHAS AEREAS 
+G3 1794
+Duração:
+2hr(s) 45min(s)
+Família de tarifas:
+FLEX
+Cabine:
+Econômica 
+/ O
+BSB
+BRASILIA,
+ 
+BRASIL
+POA
+PORTO
+ 
+ALEGRE,
+ 
+BRASIL
+Aeronave:
+BOEING 737-800 JET
+Partindo às:
+08:45
+Terminal:
+Não disponível
+Chegando às:
+11:30
+Terminal:
+TERMINAL 1
+Nome
+ 
+do
+ 
+passageiro:
+Assentos:
+Recibo(s)
+ 
+de
+ 
+Bilhete(s)
+ 
+Eletrônico(s):
+» 
+Rodrigo Fortes
+Não confirmado
+1272149921931 
+» 
+Silvana Ujvari
+Não confirmado
+1272149921932 
+» 
+Tais Fortes
+Não confirmado
+1272149921933 

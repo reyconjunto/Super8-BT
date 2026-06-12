@@ -111,6 +111,7 @@ const App = {
         document.getElementById('format-individual').addEventListener('click', () => App.selectFormat('individual'));
         document.getElementById('format-fixed').addEventListener('click', () => App.selectFormat('fixed'));
         document.getElementById('format-groups').addEventListener('click', () => App.selectFormat('groups'));
+        document.getElementById('format-knockout').addEventListener('click', () => App.selectFormat('knockout'));
         document.getElementById('num-players-input').addEventListener('input', App.validateFormatSetup);
         document.getElementById('num-groups-input').addEventListener('input', App.validateFormatSetup);
         document.getElementById('btn-next-to-players').addEventListener('click', App.goToPlayersScreen);
@@ -206,9 +207,11 @@ const App = {
         const numHint = document.getElementById('num-players-hint');
         const fixedModeSel = document.getElementById('fixed-mode-selection');
         const groupsSetup = document.getElementById('groups-setup');
+        const knockoutOptions = document.getElementById('knockout-options');
         
         numSetup.style.display = 'block';
         if (groupsSetup) groupsSetup.style.display = (formatType === 'groups') ? 'block' : 'none';
+        if (knockoutOptions) knockoutOptions.style.display = (formatType === 'groups' || formatType === 'knockout') ? 'block' : 'none';
         
         const individualSetup = document.getElementById('individual-setup');
         if (individualSetup) individualSetup.style.display = (formatType === 'individual') ? 'block' : 'none';
@@ -235,7 +238,7 @@ const App = {
         
         if (App.state.format === 'individual') {
             btn.disabled = isNaN(val) || val < 4;
-        } else if (App.state.format === 'fixed' || App.state.format === 'groups') {
+        } else if (App.state.format === 'fixed' || App.state.format === 'groups' || App.state.format === 'knockout') {
             const numGroups = parseInt(document.getElementById('num-groups-input').value);
             let validGroups = true;
             if (App.state.format === 'groups') {
@@ -266,7 +269,7 @@ const App = {
         }
 
         const modeRadio = document.querySelector('input[name="fixed_mode"]:checked');
-        App.state.fixedRegistrationMode = ((App.state.format === 'fixed' || App.state.format === 'groups') && modeRadio) ? modeRadio.value : 'individual';
+        App.state.fixedRegistrationMode = ((App.state.format === 'fixed' || App.state.format === 'groups' || App.state.format === 'knockout') && modeRadio) ? modeRadio.value : 'individual';
 
         // Re-render inputs in case format changed
         App.renderPlayerInputs();
@@ -293,7 +296,7 @@ const App = {
         const container = document.getElementById('players-list');
         container.innerHTML = '';
         
-        if ((App.state.format === 'fixed' || App.state.format === 'groups') && App.state.fixedRegistrationMode === 'predefined') {
+        if ((App.state.format === 'fixed' || App.state.format === 'groups' || App.state.format === 'knockout') && App.state.fixedRegistrationMode === 'predefined') {
             const numPairs = App.state.numPlayers / 2;
             for(let i=0; i<numPairs; i++) {
                 container.innerHTML += `
@@ -337,7 +340,7 @@ const App = {
         // Collect players or predefined pairs
         const inputs = document.querySelectorAll('.p-input');
         
-        if ((App.state.format === 'fixed' || App.state.format === 'groups') && App.state.fixedRegistrationMode === 'predefined') {
+        if ((App.state.format === 'fixed' || App.state.format === 'groups' || App.state.format === 'knockout') && App.state.fixedRegistrationMode === 'predefined') {
             App.state.fixedPairs = [];
             const toggles = document.querySelectorAll('.seed-toggle');
             for(let i=0; i<inputs.length; i++) {
@@ -482,11 +485,17 @@ const App = {
             App.state.tournamentId = Math.random().toString(36).substring(2, 7).toUpperCase();
         }
 
+        const thirdPlaceRadio = document.querySelector('input[name="third_place_mode"]:checked');
+        App.state.hasThirdPlaceMatch = (thirdPlaceRadio && thirdPlaceRadio.value === 'match');
+
         if (App.state.format === 'individual') {
             App.state.tournament = IndividualMode.generateRounds(App.state.players, App.state.numCourts, App.state.maxMatchesPerPlayer);
             document.getElementById('rank-name-col').innerText = 'Jogador';
         } else if (App.state.format === 'groups') {
             App.state.tournament = GroupsMode.generateRounds(App.state.fixedPairs, App.state.numGroups, App.state.numCourts);
+            document.getElementById('rank-name-col').innerText = 'Dupla';
+        } else if (App.state.format === 'knockout') {
+            App.state.tournament = KnockoutMode.generateInitialRound(App.state.fixedPairs);
             document.getElementById('rank-name-col').innerText = 'Dupla';
         } else {
             App.state.tournament = RoundRobin.generateSubArrays(App.state.fixedPairs);
@@ -690,7 +699,7 @@ const App = {
         }
 
         // Auto-generate next knockout phase if applicable
-        if (round.isKnockout && round.matches.length > 1) {
+        if (round.isKnockout && round.matches.length > 1 && round.knockoutLabel !== 'Final') {
             let nextPhaseTeams = [];
             let nextPhaseLosers = [];
             
@@ -724,6 +733,18 @@ const App = {
                     score2: null,
                     finished: false,
                     groupName: nextLabel
+                });
+            }
+
+            if (nextMatchCount === 1 && App.state.hasThirdPlaceMatch && nextPhaseLosers.length >= 2) {
+                nextMatches.push({
+                    id: `ko_prog_${round.roundNum}_3rd`,
+                    t1: nextPhaseLosers[0],
+                    t2: nextPhaseLosers[1],
+                    score1: null,
+                    score2: null,
+                    finished: false,
+                    groupName: "Disputa de 3º Lugar"
                 });
             }
 
@@ -791,34 +812,39 @@ const App = {
         let statsArray = Object.values(App.state.stats);
         const container = document.getElementById('ranking-container');
         
-        if (App.state.format === 'groups') {
-            container.innerHTML = '';
+        container.innerHTML = '';
 
-            // Pódio Final
-            if (App.state.tournament && App.state.tournament.rounds) {
-                let finalMatch = App.state.tournament.rounds.flatMap(r => r.matches).find(m => m.groupName === 'Final' && m.finished);
-                let semiRound = App.state.tournament.rounds.find(r => r.knockoutLabel === 'Semifinal');
+        // Pódio Final
+        if (App.state.tournament && App.state.tournament.rounds) {
+            let finalMatch = App.state.tournament.rounds.flatMap(r => r.matches).find(m => m.groupName === 'Final' && m.finished);
+            let semiRound = App.state.tournament.rounds.find(r => r.knockoutLabel === 'Semifinal');
 
-                if (finalMatch) {
+            if (finalMatch) {
                     let first = finalMatch.score1 > finalMatch.score2 ? finalMatch.t1.name : finalMatch.t2.name;
                     let second = finalMatch.score1 > finalMatch.score2 ? finalMatch.t2.name : finalMatch.t1.name;
                     let third = "";
 
                     if (semiRound) {
-                        let semiLosers = [];
-                        semiRound.matches.forEach(m => {
-                            if (m.finished) {
-                                if (m.score1 > m.score2) semiLosers.push(m.t2);
-                                else if (m.score2 > m.score1) semiLosers.push(m.t1);
-                                else semiLosers.push(m.t2);
-                            }
-                        });
+                        let thirdMatch = App.state.tournament.rounds.flatMap(r => r.matches).find(m => m.groupName === 'Disputa de 3º Lugar' && m.finished);
+                        
+                        if (thirdMatch) {
+                            third = thirdMatch.score1 > thirdMatch.score2 ? thirdMatch.t1.name : thirdMatch.t2.name;
+                        } else {
+                            let semiLosers = [];
+                            semiRound.matches.forEach(m => {
+                                if (m.finished) {
+                                    if (m.score1 > m.score2) semiLosers.push(m.t2);
+                                    else if (m.score2 > m.score1) semiLosers.push(m.t1);
+                                    else semiLosers.push(m.t2);
+                                }
+                            });
 
-                        if (semiLosers.length >= 2) {
-                            let loserStats = semiLosers.map(t => App.state.stats[t.id]).filter(s => s);
-                            loserStats = Scoring.sortRanking(loserStats);
-                            if (loserStats.length > 0) {
-                                third = loserStats[0].obj.name;
+                            if (semiLosers.length >= 2) {
+                                let loserStats = semiLosers.map(t => App.state.stats[t.id]).filter(s => s);
+                                loserStats = Scoring.sortRanking(loserStats);
+                                if (loserStats.length > 0) {
+                                    third = loserStats[0].obj.name;
+                                }
                             }
                         }
                     }
@@ -838,6 +864,7 @@ const App = {
                 }
             }
 
+        if (App.state.format === 'groups') {
             App.state.tournament.groups.forEach(group => {
                 let groupStats = statsArray.filter(s => group.participants.find(p => p.id === s.obj.id));
                 groupStats = Scoring.sortRanking(groupStats);
