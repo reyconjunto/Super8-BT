@@ -47,6 +47,7 @@ const GroupsMode = {
                 const groupMatches = round.matches.map(m => {
                     return {
                         ...m,
+                        id: `${group.id}_${m.id}`,
                         groupId: group.id,
                         groupName: group.name
                     };
