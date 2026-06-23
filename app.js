@@ -653,20 +653,12 @@ const App = {
                             </div>
                             <div style="justify-self: end;">
                                 ${!App.isViewMode && !match.finished ? `<button class="btn-save-match btn-primary" style="padding: 4px 16px; font-size: 0.85rem; font-weight: bold; border: none; border-radius: 6px; cursor: pointer;" data-mid="${match.id}" data-rn="${round.roundNum}">Salvar</button>` : ''}
+                                ${!App.isViewMode && match.finished ? `<button class="btn-edit-match btn-secondary" style="padding: 4px 16px; font-size: 0.85rem; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; background:rgba(255,255,255,0.1);" data-mid="${match.id}" data-rn="${round.roundNum}">✏️ Editar</button>` : ''}
                             </div>
                         </div>
                     </div>
                 `;
             }).join('');
-
-            const allFinished = round.matches.length > 0 && round.matches.every(m => m.finished);
-
-            let actionHtml = '';
-            if (!App.isViewMode) {
-                actionHtml = allFinished 
-                    ? `<button class="btn-edit-round btn-secondary" data-rn="${round.roundNum}" style="padding:5px 12px;font-size:0.8rem;width:auto;">✏️ Editar</button>`
-                    : ``;
-            }
 
             let roundTitle = round.isKnockout ? `🏆 ${round.knockoutLabel}` : `Rodada ${round.roundNum}`;
 
@@ -674,7 +666,6 @@ const App = {
                <div class="round-block">
                     <div class="round-header">
                         <h3>${roundTitle}</h3>
-                        ${actionHtml}
                     </div>
                     ${matchesHtml}
                </div> 
@@ -684,8 +675,8 @@ const App = {
         document.querySelectorAll('.btn-save-match').forEach(btn => {
             btn.addEventListener('click', (e) => App.finishMatch(e.target.dataset.mid, parseInt(e.target.dataset.rn)));
         });
-        document.querySelectorAll('.btn-edit-round').forEach(btn => {
-            btn.addEventListener('click', (e) => App.editRound(parseInt(e.target.dataset.rn)));
+        document.querySelectorAll('.btn-edit-match').forEach(btn => {
+            btn.addEventListener('click', (e) => App.editMatch(e.target.dataset.mid, parseInt(e.target.dataset.rn)));
         });
     },
 
@@ -799,28 +790,27 @@ const App = {
         App.state.tournament.rounds.push(newRound);
     },
 
-    editRound: (roundNum) => {
+    editMatch: (matchId, roundNum) => {
         const round = App.state.tournament.rounds.find(r => r.roundNum === roundNum);
+        const match = round.matches.find(m => m.id === matchId);
         
-        round.matches.forEach(match => {
-            if(!match.finished) return;
-            
-            // Subtrai os stats salvos anteriormente
-            const res = Scoring.calculateMatchScore(match.score1, match.score2);
-            
-            if (App.state.format === 'individual') {
-                const dummies = match.dummies || [];
-                if (!dummies.includes(match.t1[0].id)) App.addStatsToPlayer(match.t1[0].id, -res.winsA, -res.sgA, -res.proA, -1);
-                if (!dummies.includes(match.t1[1].id)) App.addStatsToPlayer(match.t1[1].id, -res.winsA, -res.sgA, -res.proA, -1);
-                if (!dummies.includes(match.t2[0].id)) App.addStatsToPlayer(match.t2[0].id, -res.winsB, -res.sgB, -res.proB, -1);
-                if (!dummies.includes(match.t2[1].id)) App.addStatsToPlayer(match.t2[1].id, -res.winsB, -res.sgB, -res.proB, -1);
-            } else {
-                App.addStatsToPlayer(match.t1.id, -res.winsA, -res.sgA, -res.proA, -1);
-                App.addStatsToPlayer(match.t2.id, -res.winsB, -res.sgB, -res.proB, -1);
-            }
-            
-            match.finished = false;
-        });
+        if(!match || !match.finished) return;
+        
+        // Subtrai os stats salvos anteriormente
+        const res = Scoring.calculateMatchScore(match.score1, match.score2);
+        
+        if (App.state.format === 'individual') {
+            const dummies = match.dummies || [];
+            if (!dummies.includes(match.t1[0].id)) App.addStatsToPlayer(match.t1[0].id, -res.winsA, -res.sgA, -res.proA, -1);
+            if (!dummies.includes(match.t1[1].id)) App.addStatsToPlayer(match.t1[1].id, -res.winsA, -res.sgA, -res.proA, -1);
+            if (!dummies.includes(match.t2[0].id)) App.addStatsToPlayer(match.t2[0].id, -res.winsB, -res.sgB, -res.proB, -1);
+            if (!dummies.includes(match.t2[1].id)) App.addStatsToPlayer(match.t2[1].id, -res.winsB, -res.sgB, -res.proB, -1);
+        } else {
+            App.addStatsToPlayer(match.t1.id, -res.winsA, -res.sgA, -res.proA, -1);
+            App.addStatsToPlayer(match.t2.id, -res.winsB, -res.sgB, -res.proB, -1);
+        }
+        
+        match.finished = false;
         
         App.saveState();
         App.renderRounds();
