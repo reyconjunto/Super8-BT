@@ -649,6 +649,7 @@ const App = {
                             <input type="number" min="0" class="score-input s-out" data-mid="${match.id}" data-team="1" ${isReadonly} value="${match.score1 !== null ? match.score1 : ''}">
                             <span class="vs">X</span>
                             <input type="number" min="0" class="score-input s-out" data-mid="${match.id}" data-team="2" ${isReadonly} value="${match.score2 !== null ? match.score2 : ''}">
+                            ${!App.isViewMode && !match.finished ? `<button class="btn-save-match btn btn-primary" style="padding: 2px 8px; font-size: 0.75rem; margin-left: 10px;" data-mid="${match.id}" data-rn="${round.roundNum}">Salvar</button>` : ''}
                         </div>
                     </div>
                 `;
@@ -660,7 +661,7 @@ const App = {
             if (!App.isViewMode) {
                 actionHtml = allFinished 
                     ? `<button class="btn-edit-round btn-secondary" data-rn="${round.roundNum}" style="padding:5px 12px;font-size:0.8rem;width:auto;">✏️ Editar</button>`
-                    : `<button class="btn-finish-round" data-rn="${round.roundNum}">Salvar Rodada</button>`;
+                    : ``;
             }
 
             let roundTitle = round.isKnockout ? `🏆 ${round.knockoutLabel}` : `Rodada ${round.roundNum}`;
@@ -676,125 +677,122 @@ const App = {
             `;
         });
 
-        document.querySelectorAll('.btn-finish-round').forEach(btn => {
-            btn.addEventListener('click', (e) => App.finishRound(parseInt(e.target.dataset.rn)));
+        document.querySelectorAll('.btn-save-match').forEach(btn => {
+            btn.addEventListener('click', (e) => App.finishMatch(e.target.dataset.mid, parseInt(e.target.dataset.rn)));
         });
         document.querySelectorAll('.btn-edit-round').forEach(btn => {
             btn.addEventListener('click', (e) => App.editRound(parseInt(e.target.dataset.rn)));
         });
     },
 
-    finishRound: (roundNum) => {
+    finishMatch: (matchId, roundNum) => {
         const round = App.state.tournament.rounds.find(r => r.roundNum === roundNum);
-        let error = false;
+        const match = round.matches.find(m => m.id === matchId);
+        
+        if (!match || match.finished) return;
 
-        round.matches.forEach(match => {
-            if(match.finished) return;
+        const input1 = document.querySelector(`.score-input[data-mid="${match.id}"][data-team="1"]`);
+        const input2 = document.querySelector(`.score-input[data-mid="${match.id}"][data-team="2"]`);
+        
+        const s1 = parseInt(input1.value);
+        const s2 = parseInt(input2.value);
 
-            const input1 = document.querySelector(`.score-input[data-mid="${match.id}"][data-team="1"]`);
-            const input2 = document.querySelector(`.score-input[data-mid="${match.id}"][data-team="2"]`);
-            
-            const s1 = parseInt(input1.value);
-            const s2 = parseInt(input2.value);
-
-            if (isNaN(s1) || isNaN(s2)) {
-                error = true;
-            } else {
-                match.score1 = s1;
-                match.score2 = s2;
-                match.finished = true;
-                
-                const res = Scoring.calculateMatchScore(s1, s2);
-                
-                if (App.state.format === 'individual') {
-                    const dummies = match.dummies || [];
-                    if (!dummies.includes(match.t1[0].id)) App.addStatsToPlayer(match.t1[0].id, res.winsA, res.sgA, res.proA, 1);
-                    if (!dummies.includes(match.t1[1].id)) App.addStatsToPlayer(match.t1[1].id, res.winsA, res.sgA, res.proA, 1);
-                    if (!dummies.includes(match.t2[0].id)) App.addStatsToPlayer(match.t2[0].id, res.winsB, res.sgB, res.proB, 1);
-                    if (!dummies.includes(match.t2[1].id)) App.addStatsToPlayer(match.t2[1].id, res.winsB, res.sgB, res.proB, 1);
-                } else {
-                    App.addStatsToPlayer(match.t1.id, res.winsA, res.sgA, res.proA, 1);
-                    App.addStatsToPlayer(match.t2.id, res.winsB, res.sgB, res.proB, 1);
-                }
-            }
-        });
-
-        if (error) {
-            alert("Preencha todos os placares da rodada para salvá-la.");
+        if (isNaN(s1) || isNaN(s2)) {
+            alert("Preencha os dois placares deste jogo.");
             return;
         }
 
-        // Auto-generate next knockout phase if applicable
-        if (round.isKnockout && round.matches.length > 1 && round.knockoutLabel !== 'Final') {
-            let nextPhaseTeams = [];
-            let nextPhaseLosers = [];
-            
-            // Collect winners and losers
-            round.matches.forEach(m => {
-                if (m.score1 > m.score2) {
-                    nextPhaseTeams.push(m.t1);
-                    nextPhaseLosers.push(m.t2);
-                } else if (m.score2 > m.score1) {
-                    nextPhaseTeams.push(m.t2);
-                    nextPhaseLosers.push(m.t1);
-                } else {
-                    nextPhaseTeams.push(m.t1); // In case of tie, t1 advances (fallback)
-                    nextPhaseLosers.push(m.t2);
-                }
-            });
-
-            let nextMatches = [];
-            let nextMatchCount = nextPhaseTeams.length / 2;
-            let nextLabel = "Fase Final";
-            if (nextMatchCount === 1) nextLabel = "Final";
-            else if (nextMatchCount === 2) nextLabel = "Semifinal";
-            else if (nextMatchCount === 4) nextLabel = "Quartas de Final";
-
-            for (let i = 0; i < nextMatchCount; i++) {
-                nextMatches.push({
-                    id: `ko_prog_${round.roundNum}_${i}`,
-                    t1: nextPhaseTeams[i * 2],
-                    t2: nextPhaseTeams[i * 2 + 1],
-                    score1: null,
-                    score2: null,
-                    finished: false,
-                    groupName: nextLabel
-                });
-            }
-
-            if (nextMatchCount === 1 && App.state.hasThirdPlaceMatch && nextPhaseLosers.length >= 2) {
-                nextMatches.push({
-                    id: `ko_prog_${round.roundNum}_3rd`,
-                    t1: nextPhaseLosers[0],
-                    t2: nextPhaseLosers[1],
-                    score1: null,
-                    score2: null,
-                    finished: false,
-                    groupName: "Disputa de 3º Lugar"
-                });
-            }
-
-            let newRound = {
-                roundNum: App.state.tournament.rounds.length + 1,
-                matches: nextMatches,
-                isKnockout: true,
-                knockoutLabel: nextLabel
-            };
-            App.state.tournament.rounds.push(newRound);
+        match.score1 = s1;
+        match.score2 = s2;
+        match.finished = true;
+        
+        const res = Scoring.calculateMatchScore(s1, s2);
+        
+        if (App.state.format === 'individual') {
+            const dummies = match.dummies || [];
+            if (!dummies.includes(match.t1[0].id)) App.addStatsToPlayer(match.t1[0].id, res.winsA, res.sgA, res.proA, 1);
+            if (!dummies.includes(match.t1[1].id)) App.addStatsToPlayer(match.t1[1].id, res.winsA, res.sgA, res.proA, 1);
+            if (!dummies.includes(match.t2[0].id)) App.addStatsToPlayer(match.t2[0].id, res.winsB, res.sgB, res.proB, 1);
+            if (!dummies.includes(match.t2[1].id)) App.addStatsToPlayer(match.t2[1].id, res.winsB, res.sgB, res.proB, 1);
+        } else {
+            App.addStatsToPlayer(match.t1.id, res.winsA, res.sgA, res.proA, 1);
+            App.addStatsToPlayer(match.t2.id, res.winsB, res.sgB, res.proB, 1);
         }
 
-        App.saveState();
-        App.renderRounds(); 
+        const allFinished = round.matches.length > 0 && round.matches.every(m => m.finished);
+
+        if (allFinished) {
+            if (round.isKnockout && round.matches.length > 1 && round.knockoutLabel !== 'Final') {
+                App.generateNextKnockoutPhase(round);
+            }
+        }
         
-        // If it was a knockout round, we stay on matches tab to see the next phase
-        if (!round.isKnockout) {
-            App.switchTab('tab-ranking');
-        } else {
-            // Scroll to bottom
+        App.saveState();
+        App.renderRounds();
+        App.renderRanking();
+        
+        if (allFinished && round.isKnockout) {
             setTimeout(() => {
                 document.getElementById('rounds-container').scrollIntoView({ behavior: 'smooth', block: 'end' });
             }, 100);
         }
+    },
+
+    generateNextKnockoutPhase: (round) => {
+        let nextPhaseTeams = [];
+        let nextPhaseLosers = [];
+        
+        round.matches.forEach(m => {
+            if (m.score1 > m.score2) {
+                nextPhaseTeams.push(m.t1);
+                nextPhaseLosers.push(m.t2);
+            } else if (m.score2 > m.score1) {
+                nextPhaseTeams.push(m.t2);
+                nextPhaseLosers.push(m.t1);
+            } else {
+                nextPhaseTeams.push(m.t1); 
+                nextPhaseLosers.push(m.t2);
+            }
+        });
+
+        let nextMatches = [];
+        let nextMatchCount = nextPhaseTeams.length / 2;
+        let nextLabel = "Fase Final";
+        if (nextMatchCount === 1) nextLabel = "Final";
+        else if (nextMatchCount === 2) nextLabel = "Semifinal";
+        else if (nextMatchCount === 4) nextLabel = "Quartas de Final";
+
+        for (let i = 0; i < nextMatchCount; i++) {
+            nextMatches.push({
+                id: `ko_prog_${round.roundNum}_${i}`,
+                t1: nextPhaseTeams[i * 2],
+                t2: nextPhaseTeams[i * 2 + 1],
+                score1: null,
+                score2: null,
+                finished: false,
+                groupName: nextLabel
+            });
+        }
+
+        if (nextMatchCount === 1 && App.state.hasThirdPlaceMatch && nextPhaseLosers.length >= 2) {
+            nextMatches.push({
+                id: `ko_prog_${round.roundNum}_3rd`,
+                t1: nextPhaseLosers[0],
+                t2: nextPhaseLosers[1],
+                score1: null,
+                score2: null,
+                finished: false,
+                groupName: "Disputa de 3º Lugar"
+            });
+        }
+
+        let newRound = {
+            roundNum: App.state.tournament.rounds.length + 1,
+            matches: nextMatches,
+            isKnockout: true,
+            knockoutLabel: nextLabel
+        };
+        App.state.tournament.rounds.push(newRound);
     },
 
     editRound: (roundNum) => {
