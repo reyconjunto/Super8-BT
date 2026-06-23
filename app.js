@@ -645,15 +645,15 @@ const App = {
                             <div class="team"><span>${t2Name}</span></div>
                         </div>
                         <div class="match-score" style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px;">
-                            <div style="justify-self: start;">
-                                ${!App.isViewMode && !match.finished ? `<button class="btn-save-match btn-primary" style="padding: 4px 16px; font-size: 0.85rem; font-weight: bold; border: none; border-radius: 6px; cursor: pointer;" data-mid="${match.id}" data-rn="${round.roundNum}">Salvar</button>` : ''}
-                            </div>
+                            <div class="court-badge" style="justify-self: start; position: relative;">Quadra ${courtNum}</div>
                             <div style="display: flex; justify-content: center; align-items: center; gap: 10px;">
                                 <input type="number" min="0" class="score-input s-out" data-mid="${match.id}" data-team="1" ${isReadonly} value="${match.score1 !== null ? match.score1 : ''}">
                                 <span class="vs">X</span>
                                 <input type="number" min="0" class="score-input s-out" data-mid="${match.id}" data-team="2" ${isReadonly} value="${match.score2 !== null ? match.score2 : ''}">
                             </div>
-                            <div class="court-badge" style="justify-self: end; position: relative;">Quadra ${courtNum}</div>
+                            <div style="justify-self: end;">
+                                ${!App.isViewMode && !match.finished ? `<button class="btn-save-match btn-primary" style="padding: 4px 16px; font-size: 0.85rem; font-weight: bold; border: none; border-radius: 6px; cursor: pointer;" data-mid="${match.id}" data-rn="${round.roundNum}">Salvar</button>` : ''}
+                            </div>
                         </div>
                     </div>
                 `;
