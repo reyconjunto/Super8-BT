@@ -12,7 +12,8 @@ const firebaseConfig = {
 let db = null;
 if (typeof firebase !== 'undefined') {
     firebase.initializeApp(firebaseConfig);
-    db = firebase.database();
+    db = firebase.firestore();
+    db.enablePersistence().catch(err => console.error("Offline persistence err:", err));
 }
 
 // Main Application Logic
@@ -34,14 +35,21 @@ const App = {
 
         const urlParams = new URLSearchParams(window.location.search);
         const tId = urlParams.get('t');
+        const adminId = urlParams.get('admin');
 
-        if (tId && db) {
-            App.isViewMode = true;
-            document.getElementById('view-mode-banner').style.display = 'block';
-            document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+        let targetId = tId || adminId;
+
+        if (targetId && db) {
+            if (tId) {
+                App.isViewMode = true;
+                document.getElementById('view-mode-banner').style.display = 'block';
+                document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+            } else {
+                App.state.tournamentId = adminId;
+            }
             
-            db.ref('tournaments/' + tId).on('value', (snapshot) => {
-                const data = snapshot.val();
+            db.collection('tournaments').doc(targetId).onSnapshot((doc) => {
+                const data = doc.data();
                 if (data) {
                     App.state = data;
                     if (App.state.tournament) {
@@ -50,12 +58,13 @@ const App = {
                 } else {
                     alert("Torneio não encontrado ou ID inválido.");
                 }
+            }, (error) => {
+                console.error("Erro ao carregar do Firestore: ", error);
             });
         } else {
-            if (App.loadState()) {
-                if (App.state.tournament) {
-                    App.resumeTournament();
-                }
+            const recentAdmin = localStorage.getItem('super8bt_recent_admin');
+            if (recentAdmin && confirm("Você tem um torneio em andamento neste navegador. Deseja retomá-lo?\n\n(Cancelar irá limpar a tela para um novo torneio)")) {
+                window.location.href = '?admin=' + recentAdmin;
             }
         }
     },
@@ -63,29 +72,21 @@ const App = {
     saveState: () => {
         if (App.isViewMode) return;
         
-        try {
-            localStorage.setItem('super8bt_state', JSON.stringify(App.state));
-        } catch (e) {
-            console.error("Erro no localStorage:", e);
-        }
-
-        if (App.state.tournamentId && db) {
+        if (App.state.tournamentId) {
             try {
-                db.ref('tournaments/' + App.state.tournamentId).set(App.state).catch(e => console.error("Firebase async error", e));
+                localStorage.setItem('super8bt_recent_admin', App.state.tournamentId);
             } catch (e) {
-                console.error("Erro síncrono no Firebase:", e);
+                console.error("Erro no localStorage:", e);
+            }
+
+            if (db) {
+                db.collection('tournaments').doc(App.state.tournamentId).set(App.state)
+                  .catch(e => console.error("Firestore sync error", e));
             }
         }
     },
 
     loadState: () => {
-        try {
-            const saved = localStorage.getItem('super8bt_state');
-            if (saved) {
-                App.state = JSON.parse(saved);
-                return true;
-            }
-        } catch(e) { console.error('Erro ao ler state', e); }
         return false;
     },
 
@@ -137,13 +138,13 @@ const App = {
 
         // Reset
         document.getElementById('btn-reset-tournament').addEventListener('click', () => {
-            if (confirm("Tem certeza que deseja apagar os dados e o andamento deste torneio?")) {
+            if (confirm("Tem certeza que deseja encerrar e limpar a sua tela?\n\nIsso não apaga o torneio da nuvem, apenas tira da sua visualização atual.")) {
                 try {
-                    localStorage.removeItem('super8bt_state');
+                    localStorage.removeItem('super8bt_recent_admin');
                 } catch (e) {
                     console.error("Erro ao remover localStorage:", e);
                 }
-                location.reload();
+                window.location.href = window.location.pathname;
             }
         });
 
@@ -503,6 +504,10 @@ const App = {
         }
 
         App.saveState();
+        
+        const newUrl = window.location.pathname + '?admin=' + App.state.tournamentId;
+        window.history.pushState({path:newUrl}, '', newUrl);
+
         App.renderRounds();
         App.renderRanking();
         App.switchScreen('tournament-screen');
