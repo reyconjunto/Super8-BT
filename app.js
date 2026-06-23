@@ -12,8 +12,7 @@ const firebaseConfig = {
 let db = null;
 if (typeof firebase !== 'undefined') {
     firebase.initializeApp(firebaseConfig);
-    db = firebase.firestore();
-    db.enablePersistence().catch(err => console.error("Offline persistence err:", err));
+    db = firebase.database();
 }
 
 // Main Application Logic
@@ -48,8 +47,8 @@ const App = {
                 App.state.tournamentId = adminId;
             }
             
-            db.collection('tournaments').doc(targetId).onSnapshot((doc) => {
-                const data = doc.data();
+            db.ref('tournaments/' + targetId).on('value', (snapshot) => {
+                const data = snapshot.val();
                 if (data) {
                     App.state = data;
                     if (App.state.tournament) {
@@ -59,7 +58,7 @@ const App = {
                     alert("Torneio não encontrado ou ID inválido.");
                 }
             }, (error) => {
-                console.error("Erro ao carregar do Firestore: ", error);
+                console.error("Erro ao carregar do Firebase: ", error);
             });
         } else {
             const recentAdmin = localStorage.getItem('super8bt_recent_admin');
@@ -80,8 +79,13 @@ const App = {
             }
 
             if (db) {
-                db.collection('tournaments').doc(App.state.tournamentId).set(App.state)
-                  .catch(e => console.error("Firestore sync error", e));
+                // Remove propriedades 'undefined' que causam erro silencioso no Firebase
+                const cleanState = JSON.parse(JSON.stringify(App.state));
+                db.ref('tournaments/' + App.state.tournamentId).set(cleanState)
+                  .catch(e => {
+                      console.error("Firebase sync error", e);
+                      alert("Erro ao salvar no servidor: " + e.message);
+                  });
             }
         }
     },
