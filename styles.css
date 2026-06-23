@@ -384,6 +384,7 @@ p { font-size: 0.95rem; color: var(--sand-secondary); text-align: center; margin
     display: flex;
     justify-content: center;
     align-items: center;
+    flex-wrap: wrap;
     gap: 15px;
     margin-top: 10px;
     padding-top: 10px;
