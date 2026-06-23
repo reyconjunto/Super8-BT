@@ -181,6 +181,23 @@ const App = {
                 }
             });
         }
+
+        // Share Admin
+        const shareAdminBtn = document.getElementById('btn-share-admin-link');
+        if (shareAdminBtn) {
+            shareAdminBtn.addEventListener('click', () => {
+                if (App.state.tournamentId) {
+                    const url = window.location.origin + window.location.pathname + '?admin=' + App.state.tournamentId;
+                    navigator.clipboard.writeText(url).then(() => {
+                        alert('Link de Administrador copiado!\n\nGuarde este link ou envie para o seu outro dispositivo para ter acesso total ao torneio:\n' + url);
+                    }).catch(err => {
+                        alert('Erro ao copiar. Acesse pelo link:\n' + url);
+                    });
+                } else {
+                    alert('Inicie o torneio primeiro!');
+                }
+            });
+        }
     },
 
     // --- UI Navigation ---
