@@ -393,8 +393,6 @@ p { font-size: 0.95rem; color: var(--sand-secondary); text-align: center; margin
 }
 
 .court-badge {
-    position: absolute;
-    left: 0;
     background: var(--sunset-orange);
     color: white;
     padding: 6px 12px;
