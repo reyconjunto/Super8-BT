@@ -22,25 +22,27 @@ const Scoring = {
     },
 
     // Ordena o array de stats baseado nos criterios:
-    // 1. Pontuação (Vitórias * 10) + SG
-    // 2. Vitórias
-    // 3. Saldo de Games
-    // 4. Games Pró
+    // 1. Vitórias
+    // 2. Saldo de Games
+    // 3. Aproveitamento (% Games Pró)
+    // 4. Menos jogos disputados
+    // 5. Cabeça de chave
     sortRanking: (statsList) => {
         return statsList.sort((a, b) => {
-            let scoreA = (a.wins * 10) + a.sg;
-            let scoreB = (b.wins * 10) + b.sg;
+            let matchesA = a.matches || 0;
+            let matchesB = b.matches || 0;
 
-            // 1. Pontos totais
-            if (scoreB !== scoreA) return scoreB - scoreA;
-            
-            // 2. Vitórias
+            // 0. Jogadores sem partidas vão para o fim da tabela
+            if (matchesA === 0 && matchesB > 0) return 1;
+            if (matchesB === 0 && matchesA > 0) return -1;
+
+            // 1. Vitórias
             if (b.wins !== a.wins) return b.wins - a.wins;
             
-            // 3. Saldo de games
+            // 2. Saldo de games
             if (b.sg !== a.sg) return b.sg - a.sg;
             
-            // 4. Aproveitamento (% de Games Ganhos)
+            // 3. Aproveitamento (% de Games Ganhos)
             let totalA = (2 * a.pro) - a.sg;
             let effA = totalA > 0 ? (a.pro / totalA) : 0;
             
@@ -49,12 +51,10 @@ const Scoring = {
             
             if (effB !== effA) return effB - effA;
             
-            // 5. Menos jogos disputados (eficiência)
-            let matchesA = a.matches || 0;
-            let matchesB = b.matches || 0;
+            // 4. Menos jogos disputados (eficiência)
             if (matchesA !== matchesB) return matchesA - matchesB; // Menor é melhor
             
-            // 6. Cabeça de chave (Seed)
+            // 5. Cabeça de chave (Seed)
             let seedA = (a.obj && a.obj.isSeed) ? 1 : 0;
             let seedB = (b.obj && b.obj.isSeed) ? 1 : 0;
             if (seedB !== seedA) return seedB - seedA;

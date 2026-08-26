@@ -890,7 +890,7 @@ const App = {
                 let tbodyHtml = '';
                 groupStats.forEach((stat, index) => {
                     let medal = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : ''));
-                    let finalScore = (stat.wins * 10) + stat.sg;
+                    let matches = stat.matches || 0;
                     tbodyHtml += `
                        <tr>
                             <td>${index + 1}</td>
@@ -899,7 +899,7 @@ const App = {
                                 ${!App.isViewMode ? `<button class="btn-edit-name" data-id="${stat.obj.id}" style="background:none; border:none; cursor:pointer; font-size:0.8rem; margin-left:5px;" title="Editar Nome">✏️</button>` : ''}
                                 <span class="medal">${medal}</span>
                             </td>
-                            <td><strong>${finalScore}</strong></td>
+                            <td><strong>${matches}</strong></td>
                             <td>${stat.wins}</td>
                             <td>${stat.sg}</td>
                             <td>${stat.pro}</td>
@@ -915,7 +915,7 @@ const App = {
                                 <tr>
                                     <th>#</th>
                                     <th>Dupla</th>
-                                    <th title="Pontuação Total">Pts</th>
+                                    <th title="Jogos Disputados">J</th>
                                     <th title="Vitórias">V</th>
                                     <th title="Saldo de Games">SG</th>
                                     <th title="Games Pró">Pró</th>
@@ -934,7 +934,7 @@ const App = {
             let tbodyHtml = '';
             statsArray.forEach((stat, index) => {
                 let medal = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : ''));
-                let finalScore = (stat.wins * 10) + stat.sg;
+                let matches = stat.matches || 0;
                 tbodyHtml += `
                    <tr>
                         <td>${index + 1}</td>
@@ -943,7 +943,7 @@ const App = {
                             ${!App.isViewMode ? `<button class="btn-edit-name" data-id="${stat.obj.id}" style="background:none; border:none; cursor:pointer; font-size:0.8rem; margin-left:5px;" title="Editar Nome">✏️</button>` : ''}
                             <span class="medal">${medal}</span>
                         </td>
-                        <td><strong>${finalScore}</strong></td>
+                        <td><strong>${matches}</strong></td>
                         <td>${stat.wins}</td>
                         <td>${stat.sg}</td>
                         <td>${stat.pro}</td>
@@ -958,7 +958,7 @@ const App = {
                             <tr>
                                 <th>#</th>
                                 <th>${App.state.format === 'individual' ? 'Jogador' : 'Dupla'}</th>
-                                <th title="Pontuação Total">Pts</th>
+                                <th title="Jogos Disputados">J</th>
                                 <th title="Vitórias">V</th>
                                 <th title="Saldo de Games">SG</th>
                                 <th title="Games Pró">Pró</th>
@@ -1011,12 +1011,12 @@ const App = {
         let statsArray = Object.values(App.state.stats);
         statsArray = Scoring.sortRanking(statsArray);
         
-        let csvContent = "Posicao,Nome,Pontos Totais,Vitorias,Saldo de Games,Games Pro\n";
+        let csvContent = "Posicao,Nome,Jogos,Vitorias,Saldo de Games,Games Pro\n";
         
         statsArray.forEach((stat, index) => {
-            let finalScore = (stat.wins * 10) + stat.sg;
+            let matches = stat.matches || 0;
             let name = stat.obj.name.replace(/"/g, '""');
-            csvContent += `${index + 1},"${name}",${finalScore},${stat.wins},${stat.sg},${stat.pro}\n`;
+            csvContent += `${index + 1},"${name}",${matches},${stat.wins},${stat.sg},${stat.pro}\n`;
         });
         
         const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });

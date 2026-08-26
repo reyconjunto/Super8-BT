@@ -108,13 +108,23 @@ const GroupsMode = {
 
         // 2. Ordenar o consolidado: 
         consolidated.sort((a, b) => {
+            let matchesA = a.matches || 0;
+            let matchesB = b.matches || 0;
+            if (matchesA === 0 && matchesB > 0) return 1;
+            if (matchesB === 0 && matchesA > 0) return -1;
+
             if (a.groupRank !== b.groupRank) return a.groupRank - b.groupRank; // Menor rank (1) é melhor
             
-            let ptsA = (a.wins * 10) + a.sg;
-            let ptsB = (b.wins * 10) + b.sg;
-            if (ptsB !== ptsA) return ptsB - ptsA;
             if (b.wins !== a.wins) return b.wins - a.wins;
             if (b.sg !== a.sg) return b.sg - a.sg;
+            
+            let totalA = (2 * a.pro) - a.sg;
+            let effA = totalA > 0 ? (a.pro / totalA) : 0;
+            
+            let totalB = (2 * b.pro) - b.sg;
+            let effB = totalB > 0 ? (b.pro / totalB) : 0;
+            
+            if (effB !== effA) return effB - effA;
             return b.pro - a.pro;
         });
 
