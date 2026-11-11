@@ -20,8 +20,12 @@ const App = {
     isViewMode: false,
     state: {
         players: [],
-        format: null, // 'individual' or 'fixed'
+        format: null, // 'individual', 'fixed', 'groups', 'knockout', or 'teams'
         numPlayers: 8,
+        numTeams: 2,
+        pairsPerTeam: 3,
+        teams: [],
+        teamStats: {},
         fixedPairs: [], 
         tournament: null, 
         stats: {},
@@ -97,6 +101,8 @@ const App = {
     resumeTournament: () => {
         if (App.state.format === 'individual') {
             document.getElementById('rank-name-col').innerText = 'Jogador';
+        } else if (App.state.format === 'teams') {
+            document.getElementById('rank-name-col').innerText = 'Equipe';
         } else {
             document.getElementById('rank-name-col').innerText = 'Dupla';
         }
@@ -106,6 +112,7 @@ const App = {
             btnKnockout.style.display = (App.state.format === 'groups' && !App.isViewMode) ? 'inline-block' : 'none';
         }
 
+        App.renderTeamsLiveScoreboard();
         App.renderRounds();
         App.renderRanking();
         App.switchScreen('tournament-screen');
@@ -117,8 +124,16 @@ const App = {
         document.getElementById('format-fixed').addEventListener('click', () => App.selectFormat('fixed'));
         document.getElementById('format-groups').addEventListener('click', () => App.selectFormat('groups'));
         document.getElementById('format-knockout').addEventListener('click', () => App.selectFormat('knockout'));
+        const fmtTeams = document.getElementById('format-teams');
+        if (fmtTeams) fmtTeams.addEventListener('click', () => App.selectFormat('teams'));
+
         document.getElementById('num-players-input').addEventListener('input', App.validateFormatSetup);
         document.getElementById('num-groups-input').addEventListener('input', App.validateFormatSetup);
+        const numTeamsInp = document.getElementById('num-teams-input');
+        if (numTeamsInp) numTeamsInp.addEventListener('input', App.validateFormatSetup);
+        const pairsPerTeamInp = document.getElementById('num-pairs-per-team-input');
+        if (pairsPerTeamInp) pairsPerTeamInp.addEventListener('input', App.validateFormatSetup);
+
         document.getElementById('btn-next-to-players').addEventListener('click', App.goToPlayersScreen);
 
         // Players setup
@@ -222,7 +237,8 @@ const App = {
         App.state.format = formatType;
         
         document.querySelectorAll('.format-card').forEach(c => c.classList.remove('selected'));
-        document.getElementById(`format-${formatType}`).classList.add('selected');
+        const targetCard = document.getElementById(`format-${formatType}`);
+        if (targetCard) targetCard.classList.add('selected');
         
         const numSetup = document.getElementById('num-players-setup');
         const numInput = document.getElementById('num-players-input');
@@ -230,20 +246,34 @@ const App = {
         const fixedModeSel = document.getElementById('fixed-mode-selection');
         const groupsSetup = document.getElementById('groups-setup');
         const knockoutOptions = document.getElementById('knockout-options');
+        const teamsSetup = document.getElementById('teams-setup');
+        const playersLabel = document.querySelector('label[for="num-players-input"]');
         
         numSetup.style.display = 'block';
         if (groupsSetup) groupsSetup.style.display = (formatType === 'groups') ? 'block' : 'none';
         if (knockoutOptions) knockoutOptions.style.display = (formatType === 'groups' || formatType === 'knockout') ? 'block' : 'none';
+        if (teamsSetup) teamsSetup.style.display = (formatType === 'teams') ? 'block' : 'none';
         
         const individualSetup = document.getElementById('individual-setup');
         if (individualSetup) individualSetup.style.display = (formatType === 'individual') ? 'block' : 'none';
         
-        if (formatType === 'individual') {
+        if (formatType === 'teams') {
+            if (playersLabel) playersLabel.style.display = 'none';
+            numInput.style.display = 'none';
+            numHint.style.display = 'none';
+            fixedModeSel.style.display = 'none';
+        } else if (formatType === 'individual') {
+            if (playersLabel) playersLabel.style.display = 'block';
+            numInput.style.display = 'inline-block';
+            numHint.style.display = 'block';
             numInput.value = 8;
             numInput.step = 1;
             numHint.innerText = '* Na modalidade individual, o número de atletas deve ser no mínimo 4.';
             fixedModeSel.style.display = 'none';
         } else {
+            if (playersLabel) playersLabel.style.display = 'block';
+            numInput.style.display = 'inline-block';
+            numHint.style.display = 'block';
             numInput.value = 16;
             numInput.step = 2;
             numHint.innerText = '* O número de atletas deve ser par (para formar as duplas).';
@@ -254,9 +284,31 @@ const App = {
     },
 
     validateFormatSetup: () => {
+        const btn = document.getElementById('btn-next-to-players');
+        
+        if (App.state.format === 'teams') {
+            const numTeamsInp = document.getElementById('num-teams-input');
+            const pairsPerTeamInp = document.getElementById('num-pairs-per-team-input');
+            const teamsHint = document.getElementById('teams-summary-hint');
+            
+            const nTeams = parseInt(numTeamsInp.value);
+            const nPairs = parseInt(pairsPerTeamInp.value);
+            
+            const valid = !isNaN(nTeams) && nTeams >= 2 && !isNaN(nPairs) && nPairs >= 1;
+            btn.disabled = !valid;
+            
+            if (valid && teamsHint) {
+                const totalPairs = nTeams * nPairs;
+                const totalAthletes = totalPairs * 2;
+                const matchesPerPair = (nTeams - 1) * nPairs;
+                const totalMatches = ((nTeams * (nTeams - 1)) / 2) * (nPairs * nPairs);
+                teamsHint.innerHTML = `🛡️ <strong>${nTeams} equipes</strong> com <strong>${nPairs} duplas</strong> cada = ${totalPairs} duplas (${totalAthletes} atletas).<br>🎾 Cada dupla jogará <strong>${matchesPerPair} partidas</strong>.<br>🔥 <strong>Total de ${totalMatches} jogos</strong> no torneio.`;
+            }
+            return;
+        }
+
         const numInput = document.getElementById('num-players-input');
         const val = parseInt(numInput.value);
-        const btn = document.getElementById('btn-next-to-players');
         
         if (App.state.format === 'individual') {
             btn.disabled = isNaN(val) || val < 4;
@@ -273,12 +325,26 @@ const App = {
     },
 
     goToPlayersScreen: () => {
-        const numInput = document.getElementById('num-players-input');
-        App.state.numPlayers = parseInt(numInput.value);
-
         const numCourtsInput = document.getElementById('num-courts-input');
         App.state.numCourts = parseInt(numCourtsInput.value) || 1;
         
+        if (App.state.format === 'teams') {
+            App.state.numTeams = parseInt(document.getElementById('num-teams-input').value) || 2;
+            App.state.pairsPerTeam = parseInt(document.getElementById('num-pairs-per-team-input').value) || 3;
+            App.state.numPlayers = App.state.numTeams * App.state.pairsPerTeam * 2;
+            
+            document.getElementById('players-title').innerText = `Cadastro das Equipes (${App.state.numTeams} Times)`;
+            document.querySelector('#setup-players-screen p').innerHTML = `Personalize o nome da equipe e cadastre as duplas de cada time (${App.state.pairsPerTeam} duplas por time).`;
+            
+            App.renderPlayerInputs();
+            App.validatePlayers();
+            App.switchScreen('setup-players-screen');
+            return;
+        }
+
+        const numInput = document.getElementById('num-players-input');
+        App.state.numPlayers = parseInt(numInput.value);
+
         const maxMatchesInput = document.getElementById('max-matches-input');
         if (maxMatchesInput && App.state.format === 'individual') {
             App.state.maxMatchesPerPlayer = parseInt(maxMatchesInput.value) || null;
@@ -318,6 +384,56 @@ const App = {
         const container = document.getElementById('players-list');
         container.innerHTML = '';
         
+        const btnNext = document.getElementById('btn-next-to-pairs');
+
+        if (App.state.format === 'teams') {
+            if (btnNext) btnNext.innerText = 'Iniciar Torneio de Equipes 🔥';
+
+            const defaultTeamConfigs = [
+                { name: "Time Tubarões", color: "#FF7B00" }, // Laranja
+                { name: "Time Leões", color: "#00D2FF" },    // Azul/Ciano
+                { name: "Time Panteras", color: "#00E676" }, // Verde Neon
+                { name: "Time Falcões", color: "#FFD600" },  // Amarelo Sol
+                { name: "Time Tigres", color: "#FF1744" },   // Vermelho
+                { name: "Time Águias", color: "#D500F9" },   // Roxo
+                { name: "Time Lobos", color: "#1DE9B6" },    // Teal
+                { name: "Time Ursos", color: "#FF9100" }     // Âmbar
+            ];
+
+            for (let t = 0; t < App.state.numTeams; t++) {
+                const cfg = defaultTeamConfigs[t % defaultTeamConfigs.length];
+                const teamName = cfg.name;
+                const teamColor = cfg.color;
+
+                let pairsHtml = '';
+                for (let d = 0; d < App.state.pairsPerTeam; d++) {
+                    pairsHtml += `
+                        <div class="player-input-row" style="margin-bottom: 8px;">
+                            <span class="player-num" style="color: ${teamColor}; font-weight: bold;">${d + 1}.</span>
+                            <input type="text" class="p-input team-pair-input" data-team="${t}" data-pair="${d}" placeholder="Nome da Dupla ${d + 1} (ex: Jogador 1 & Jogador 2)">
+                        </div>
+                    `;
+                }
+
+                container.innerHTML += `
+                    <div class="team-setup-card" data-team="${t}" style="background: rgba(0,0,0,0.25); border: 1px solid ${teamColor}; border-radius: 12px; padding: 15px; margin-bottom: 20px;">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap;">
+                            <span style="font-size: 1.3rem;">🛡️</span>
+                            <input type="text" class="team-name-input" data-team="${t}" value="${teamName}" placeholder="Nome da Equipe ${t + 1}" style="flex: 1; font-weight: bold; font-size: 1.05rem; color: ${teamColor}; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 6px; padding: 8px 12px; outline: none;">
+                            <input type="color" class="team-color-input" data-team="${t}" value="${teamColor}" style="width: 38px; height: 38px; border: none; border-radius: 6px; cursor: pointer; background: transparent;" title="Escolher cor da equipe">
+                        </div>
+                        <p style="text-align: left; font-size: 0.85rem; color: var(--sand-secondary); margin-bottom: 8px;">Duplas desta Equipe:</p>
+                        <div class="team-pairs-list">
+                            ${pairsHtml}
+                        </div>
+                    </div>
+                `;
+            }
+            return;
+        }
+
+        if (btnNext) btnNext.innerText = 'Continuar';
+
         if ((App.state.format === 'fixed' || App.state.format === 'groups' || App.state.format === 'knockout') && App.state.fixedRegistrationMode === 'predefined') {
             const numPairs = App.state.numPlayers / 2;
             for(let i=0; i<numPairs; i++) {
@@ -355,6 +471,12 @@ const App = {
             if (inp.value.trim() === '') allFilled = false;
         });
 
+        if (App.state.format === 'teams') {
+            document.querySelectorAll('.team-name-input').forEach(inp => {
+                if (inp.value.trim() === '') allFilled = false;
+            });
+        }
+
         document.getElementById('btn-next-to-pairs').disabled = !allFilled;
     },
 
@@ -362,6 +484,41 @@ const App = {
         // Collect players or predefined pairs
         const inputs = document.querySelectorAll('.p-input');
         
+        if (App.state.format === 'teams') {
+            App.state.teams = [];
+            for (let t = 0; t < App.state.numTeams; t++) {
+                const nameInp = document.querySelector(`.team-name-input[data-team="${t}"]`);
+                const colorInp = document.querySelector(`.team-color-input[data-team="${t}"]`);
+                const teamName = (nameInp && nameInp.value.trim()) ? nameInp.value.trim() : `Equipe ${t + 1}`;
+                const teamColor = (colorInp && colorInp.value) ? colorInp.value : '#FF7B00';
+
+                let pairs = [];
+                for (let d = 0; d < App.state.pairsPerTeam; d++) {
+                    const pairInp = document.querySelector(`.team-pair-input[data-team="${t}"][data-pair="${d}"]`);
+                    const pairName = (pairInp && pairInp.value.trim()) ? pairInp.value.trim() : `Dupla ${d + 1}`;
+                    pairs.push({
+                        id: `team_${t}_pair_${d}`,
+                        name: pairName,
+                        teamId: `team_${t}`,
+                        teamName: teamName,
+                        teamColor: teamColor,
+                        p1: { name: pairName },
+                        p2: { name: '' }
+                    });
+                }
+
+                App.state.teams.push({
+                    id: `team_${t}`,
+                    name: teamName,
+                    color: teamColor,
+                    pairs: pairs
+                });
+            }
+
+            App.startTournament();
+            return;
+        }
+
         if ((App.state.format === 'fixed' || App.state.format === 'groups' || App.state.format === 'knockout') && App.state.fixedRegistrationMode === 'predefined') {
             App.state.fixedPairs = [];
             const toggles = document.querySelectorAll('.seed-toggle');
@@ -513,6 +670,9 @@ const App = {
         if (App.state.format === 'individual') {
             App.state.tournament = IndividualMode.generateRounds(App.state.players, App.state.numCourts, App.state.maxMatchesPerPlayer);
             document.getElementById('rank-name-col').innerText = 'Jogador';
+        } else if (App.state.format === 'teams') {
+            App.state.tournament = TeamsMode.generateRounds(App.state.teams, App.state.numCourts);
+            document.getElementById('rank-name-col').innerText = 'Equipe';
         } else if (App.state.format === 'groups') {
             App.state.tournament = GroupsMode.generateRounds(App.state.fixedPairs, App.state.numGroups, App.state.numCourts);
             document.getElementById('rank-name-col').innerText = 'Dupla';
@@ -529,6 +689,7 @@ const App = {
         const newUrl = window.location.pathname + '?admin=' + App.state.tournamentId;
         window.history.pushState({path:newUrl}, '', newUrl);
 
+        App.renderTeamsLiveScoreboard();
         App.renderRounds();
         App.renderRanking();
         App.switchScreen('tournament-screen');
@@ -575,6 +736,31 @@ const App = {
             App.state.players.forEach(p => {
                 App.state.stats[p.id] = { obj: p, wins: 0, sg: 0, pro: 0, matches: 0 };
             });
+        } else if (App.state.format === 'teams') {
+            App.state.teamStats = {};
+            App.state.teams.forEach(t => {
+                App.state.teamStats[t.id] = {
+                    team: t,
+                    wins: 0,
+                    losses: 0,
+                    sg: 0,
+                    pro: 0,
+                    against: 0,
+                    matches: 0
+                };
+                t.pairs.forEach(p => {
+                    App.state.stats[p.id] = {
+                        obj: p,
+                        team: t,
+                        wins: 0,
+                        losses: 0,
+                        sg: 0,
+                        pro: 0,
+                        against: 0,
+                        matches: 0
+                    };
+                });
+            });
         } else {
             App.state.fixedPairs.forEach(p => {
                 App.state.stats[p.id] = { obj: p, wins: 0, sg: 0, pro: 0, matches: 0 };
@@ -582,8 +768,99 @@ const App = {
         }
     },
 
+    renderTeamsLiveScoreboard: () => {
+        const board = document.getElementById('teams-live-scoreboard');
+        if (!board) return;
+
+        if (App.state.format !== 'teams' || !App.state.teams || !App.state.tournament) {
+            board.style.display = 'none';
+            board.innerHTML = '';
+            return;
+        }
+
+        const { teamStats } = TeamsMode.calculateStats(App.state.teams, App.state.tournament.rounds);
+        App.state.teamStats = teamStats;
+
+        board.style.display = 'block';
+
+        if (App.state.teams.length === 2) {
+            const tA = App.state.teams[0];
+            const tB = App.state.teams[1];
+            const sA = teamStats[tA.id] || { wins: 0, sg: 0, pro: 0, matches: 0 };
+            const sB = teamStats[tB.id] || { wins: 0, sg: 0, pro: 0, matches: 0 };
+
+            board.innerHTML = `
+                <div class="glass-card" style="padding: 18px; text-align: center; border-radius: 14px; background: rgba(10, 25, 47, 0.85); border: 1px solid var(--glass-border);">
+                    <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--sunset-yellow); margin-bottom: 12px;">
+                        🛡️ Placar Geral das Equipes
+                    </div>
+                    <div style="display: flex; justify-content: space-around; align-items: center; gap: 15px; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 130px; text-align: center;">
+                            <div style="font-weight: 800; font-size: 1.15rem; color: ${tA.color}; margin-bottom: 6px;">
+                                ${tA.name}
+                            </div>
+                            <div style="font-size: 2.8rem; font-weight: 800; color: #fff; line-height: 1; font-family: var(--font-heading);">
+                                ${sA.wins}
+                            </div>
+                            <div style="font-size: 0.8rem; color: var(--sand-secondary); margin-top: 6px;">
+                                Saldo: <strong style="color: ${sA.sg >= 0 ? 'var(--sunset-yellow)' : '#ff6b6b'};">${sA.sg > 0 ? '+' : ''}${sA.sg}</strong> (${sA.pro} pró)
+                            </div>
+                        </div>
+
+                        <div style="font-size: 1.6rem; font-weight: 800; color: var(--sunset-orange); padding: 0 10px;">
+                            VS
+                        </div>
+
+                        <div style="flex: 1; min-width: 130px; text-align: center;">
+                            <div style="font-weight: 800; font-size: 1.15rem; color: ${tB.color}; margin-bottom: 6px;">
+                                ${tB.name}
+                            </div>
+                            <div style="font-size: 2.8rem; font-weight: 800; color: #fff; line-height: 1; font-family: var(--font-heading);">
+                                ${sB.wins}
+                            </div>
+                            <div style="font-size: 0.8rem; color: var(--sand-secondary); margin-top: 6px;">
+                                Saldo: <strong style="color: ${sB.sg >= 0 ? 'var(--sunset-yellow)' : '#ff6b6b'};">${sB.sg > 0 ? '+' : ''}${sB.sg}</strong> (${sB.pro} pró)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else {
+            const sortedTeams = TeamsMode.sortTeamStats(Object.values(teamStats));
+            let cardsHtml = sortedTeams.map((ts, idx) => {
+                const t = ts.team;
+                return `
+                    <div style="background: rgba(0,0,0,0.3); border: 1px solid ${t.color}; border-radius: 10px; padding: 12px; text-align: center;">
+                        <div style="font-size: 0.95rem; font-weight: 700; color: ${t.color}; margin-bottom: 4px;">
+                            ${idx === 0 ? '🥇 ' : ''}${t.name}
+                        </div>
+                        <div style="font-size: 2rem; font-weight: 800; color: #fff; line-height: 1;">
+                            ${ts.wins} <span style="font-size: 0.8rem; font-weight: 400; color: var(--sand-secondary);">Vitórias</span>
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--sand-secondary); margin-top: 4px;">
+                            SG: ${ts.sg > 0 ? '+' : ''}${ts.sg} | ${ts.matches} jogos
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            board.innerHTML = `
+                <div class="glass-card" style="padding: 16px; border-radius: 14px; background: rgba(10, 25, 47, 0.85); border: 1px solid var(--glass-border);">
+                    <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--sunset-yellow); margin-bottom: 12px; text-align: center;">
+                        🛡️ Placar Geral das Equipes
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px;">
+                        ${cardsHtml}
+                    </div>
+                </div>
+            `;
+        }
+    },
+
     // --- MATCHES RENDER ---
     renderRounds: () => {
+        App.renderTeamsLiveScoreboard();
+
         // Preservar valores digitados que ainda não foram salvos
         if (App.state.tournament && App.state.tournament.rounds) {
             document.querySelectorAll('.score-input:not(:disabled)').forEach(input => {
@@ -625,6 +902,11 @@ const App = {
                     let p4 = dummies.includes(match.t2[1].id) ? `${match.t2[1].name} 🃏` : match.t2[1].name;
                     t1Name = `${p1} & ${p2}`;
                     t2Name = `${p3} & ${p4}`;
+                } else if (App.state.format === 'teams') {
+                    const c1 = match.team1Color || 'var(--sunset-orange)';
+                    const c2 = match.team2Color || 'var(--sunset-yellow)';
+                    t1Name = `<span style="display:inline-block; font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:10px; margin-right:6px; background:${c1}; color:#fff; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">${match.team1Name}</span> <span>${match.t1.name}</span>`;
+                    t2Name = `<span style="display:inline-block; font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:10px; margin-right:6px; background:${c2}; color:#fff; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">${match.team2Name}</span> <span>${match.t2.name}</span>`;
                 } else {
                     t1Name = match.t1.name;
                     t2Name = match.t2.name;
@@ -709,6 +991,10 @@ const App = {
             if (!dummies.includes(match.t1[1].id)) App.addStatsToPlayer(match.t1[1].id, res.winsA, res.sgA, res.proA, 1);
             if (!dummies.includes(match.t2[0].id)) App.addStatsToPlayer(match.t2[0].id, res.winsB, res.sgB, res.proB, 1);
             if (!dummies.includes(match.t2[1].id)) App.addStatsToPlayer(match.t2[1].id, res.winsB, res.sgB, res.proB, 1);
+        } else if (App.state.format === 'teams') {
+            const { teamStats, pairStats } = TeamsMode.calculateStats(App.state.teams, App.state.tournament.rounds);
+            App.state.teamStats = teamStats;
+            App.state.stats = pairStats;
         } else {
             App.addStatsToPlayer(match.t1.id, res.winsA, res.sgA, res.proA, 1);
             App.addStatsToPlayer(match.t2.id, res.winsB, res.sgB, res.proB, 1);
@@ -723,6 +1009,7 @@ const App = {
         }
         
         App.saveState();
+        App.renderTeamsLiveScoreboard();
         App.renderRounds();
         App.renderRanking();
         
@@ -805,6 +1092,11 @@ const App = {
             if (!dummies.includes(match.t1[1].id)) App.addStatsToPlayer(match.t1[1].id, -res.winsA, -res.sgA, -res.proA, -1);
             if (!dummies.includes(match.t2[0].id)) App.addStatsToPlayer(match.t2[0].id, -res.winsB, -res.sgB, -res.proB, -1);
             if (!dummies.includes(match.t2[1].id)) App.addStatsToPlayer(match.t2[1].id, -res.winsB, -res.sgB, -res.proB, -1);
+        } else if (App.state.format === 'teams') {
+            match.finished = false;
+            const { teamStats, pairStats } = TeamsMode.calculateStats(App.state.teams, App.state.tournament.rounds);
+            App.state.teamStats = teamStats;
+            App.state.stats = pairStats;
         } else {
             App.addStatsToPlayer(match.t1.id, -res.winsA, -res.sgA, -res.proA, -1);
             App.addStatsToPlayer(match.t2.id, -res.winsB, -res.sgB, -res.proB, -1);
@@ -813,6 +1105,7 @@ const App = {
         match.finished = false;
         
         App.saveState();
+        App.renderTeamsLiveScoreboard();
         App.renderRounds();
         App.renderRanking();
     },
@@ -882,7 +1175,155 @@ const App = {
                 }
             }
 
-        if (App.state.format === 'groups') {
+        if (App.state.format === 'teams') {
+            const { teamStats, pairStats } = TeamsMode.calculateStats(App.state.teams, App.state.tournament.rounds);
+            App.state.teamStats = teamStats;
+            App.state.stats = pairStats;
+
+            let sortedTeamStats = TeamsMode.sortTeamStats(Object.values(teamStats));
+
+            // Pódio das Equipes se houver jogos finalizados
+            const anyFinished = App.state.tournament.rounds.some(r => r.matches.some(m => m.finished));
+            if (anyFinished && sortedTeamStats.length >= 2) {
+                const first = sortedTeamStats[0];
+                const second = sortedTeamStats[1];
+                const third = sortedTeamStats.length > 2 ? sortedTeamStats[2] : null;
+
+                container.innerHTML += `
+                    <div class="glass-card pd-0" style="margin-bottom: 25px;">
+                        <h3 style="color: var(--sunset-yellow); margin-top: 15px; margin-bottom: 10px; text-align:center; font-size: 1.4rem;">🏆 Pódio das Equipes</h3>
+                        <table class="ranking-table" style="margin-bottom: 15px;">
+                            <tbody>
+                                <tr style="background: rgba(255, 215, 0, 0.15);">
+                                    <td style="width: 60px; font-size: 1.8rem; text-align:center; border:none;">🥇</td>
+                                    <td class="player-name" style="font-weight: bold; font-size: 1.15rem; color: ${first.team.color}; border:none;">
+                                        ${first.team.name} <span style="font-size:0.85rem; font-weight:normal; color:var(--sand-secondary);">(${first.wins} vitórias, SG ${first.sg > 0 ? '+' : ''}${first.sg})</span>
+                                    </td>
+                                </tr>
+                                <tr style="background: rgba(192, 192, 192, 0.1);">
+                                    <td style="width: 60px; font-size: 1.8rem; text-align:center; border:none;">🥈</td>
+                                    <td class="player-name" style="font-weight: bold; font-size: 1.15rem; color: ${second.team.color}; border:none;">
+                                        ${second.team.name} <span style="font-size:0.85rem; font-weight:normal; color:var(--sand-secondary);">(${second.wins} vitórias, SG ${second.sg > 0 ? '+' : ''}${second.sg})</span>
+                                    </td>
+                                </tr>
+                                ${third ? `
+                                <tr style="background: rgba(205, 127, 50, 0.1);">
+                                    <td style="width: 60px; font-size: 1.8rem; text-align:center; border:none;">🥉</td>
+                                    <td class="player-name" style="font-weight: bold; font-size: 1.15rem; color: ${third.team.color}; border:none;">
+                                        ${third.team.name} <span style="font-size:0.85rem; font-weight:normal; color:var(--sand-secondary);">(${third.wins} vitórias, SG ${third.sg > 0 ? '+' : ''}${third.sg})</span>
+                                    </td>
+                                </tr>` : ''}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            // Tabela 1: Classificação Geral das Equipes
+            let teamsBodyHtml = '';
+            sortedTeamStats.forEach((ts, index) => {
+                const medal = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : ''));
+                const t = ts.team;
+                const totalGames = ts.pro + ts.against;
+                const eff = totalGames > 0 ? Math.round((ts.pro / totalGames) * 100) : 0;
+
+                teamsBodyHtml += `
+                    <tr>
+                        <td><strong>${index + 1}</strong></td>
+                        <td class="player-name" style="font-weight: 700; color: ${t.color};">
+                            ${t.name}
+                            ${!App.isViewMode ? `<button class="btn-edit-team-name" data-team-id="${t.id}" style="background:none; border:none; cursor:pointer; font-size:0.8rem; margin-left:5px;" title="Editar Nome da Equipe">✏️</button>` : ''}
+                            <span class="medal">${medal}</span>
+                        </td>
+                        <td><strong>${ts.matches}</strong></td>
+                        <td style="color: var(--sunset-yellow); font-weight: 700;">${ts.wins}</td>
+                        <td>${ts.losses}</td>
+                        <td style="color: ${ts.sg >= 0 ? '#4ade80' : '#f87171'}; font-weight: 600;">${ts.sg > 0 ? '+' : ''}${ts.sg}</td>
+                        <td>${ts.pro}</td>
+                        <td>${ts.against}</td>
+                        <td>${eff}%</td>
+                    </tr>
+                `;
+            });
+
+            container.innerHTML += `
+                <h3 style="color: var(--sunset-yellow); margin-top: 10px; margin-bottom: 10px; text-align: left;">🛡️ Classificação das Equipes</h3>
+                <div class="glass-card pd-0" style="margin-bottom: 30px;">
+                    <table class="ranking-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Equipe</th>
+                                <th title="Jogos Disputados">J</th>
+                                <th title="Vitórias">V</th>
+                                <th title="Derrotas">D</th>
+                                <th title="Saldo de Games">SG</th>
+                                <th title="Games Pró">Pró</th>
+                                <th title="Games Contra">Contra</th>
+                                <th title="Aproveitamento">%</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${teamsBodyHtml}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            // Tabela 2: Desempenho Individual das Duplas
+            let pairsList = Object.values(pairStats).map(p => ({ obj: p.pair, ...p }));
+            pairsList = Scoring.sortRanking(pairsList);
+
+            let pairsBodyHtml = '';
+            pairsList.forEach((stat, index) => {
+                const medal = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : ''));
+                const tColor = stat.team ? stat.team.color : 'var(--sunset-orange)';
+                const tName = stat.team ? stat.team.name : '';
+
+                pairsBodyHtml += `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td class="player-name">
+                            <span style="display:inline-block; font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:10px; margin-right:6px; background:${tColor}; color:#fff;">${tName}</span>
+                            ${stat.obj.name}
+                            ${!App.isViewMode ? `<button class="btn-edit-name" data-id="${stat.obj.id}" style="background:none; border:none; cursor:pointer; font-size:0.8rem; margin-left:5px;" title="Editar Nome da Dupla">✏️</button>` : ''}
+                            <span class="medal">${medal}</span>
+                        </td>
+                        <td><strong>${stat.matches || 0}</strong></td>
+                        <td>${stat.wins}</td>
+                        <td>${stat.sg}</td>
+                        <td>${stat.pro}</td>
+                    </tr>
+                `;
+            });
+
+            container.innerHTML += `
+                <h3 style="color: var(--sunset-yellow); margin-top: 20px; margin-bottom: 10px; text-align: left;">🎾 Desempenho das Duplas</h3>
+                <div class="glass-card pd-0">
+                    <table class="ranking-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Dupla</th>
+                                <th title="Jogos Disputados">J</th>
+                                <th title="Vitórias">V</th>
+                                <th title="Saldo de Games">SG</th>
+                                <th title="Games Pró">Pró</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${pairsBodyHtml}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            document.querySelectorAll('.btn-edit-team-name').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    App.editTeamName(e.currentTarget.dataset.teamId);
+                });
+            });
+        } else if (App.state.format === 'groups') {
             App.state.tournament.groups.forEach(group => {
                 let groupStats = statsArray.filter(s => group.participants.find(p => p.id === s.obj.id));
                 groupStats = Scoring.sortRanking(groupStats);
@@ -1007,17 +1448,68 @@ const App = {
         App.renderRanking();
     },
 
+    editTeamName: (teamId) => {
+        if (App.isViewMode) return;
+        const team = App.state.teams ? App.state.teams.find(t => t.id === teamId) : null;
+        if (!team) return;
+
+        let newName = prompt("Corrigir nome da equipe:", team.name);
+        if (!newName || newName.trim() === '' || newName.trim() === team.name) return;
+        newName = newName.trim();
+
+        team.name = newName;
+        if (App.state.tournament && App.state.tournament.rounds) {
+            App.state.tournament.rounds.forEach(r => {
+                r.matches.forEach(m => {
+                    if (m.team1Id === teamId) m.team1Name = newName;
+                    if (m.team2Id === teamId) m.team2Name = newName;
+                    if (m.t1 && m.t1.teamId === teamId) m.t1.teamName = newName;
+                    if (m.t2 && m.t2.teamId === teamId) m.t2.teamName = newName;
+                });
+            });
+        }
+        if (team.pairs) {
+            team.pairs.forEach(p => p.teamName = newName);
+        }
+
+        App.saveState();
+        App.renderTeamsLiveScoreboard();
+        App.renderRounds();
+        App.renderRanking();
+    },
+
     exportCSV: () => {
-        let statsArray = Object.values(App.state.stats);
-        statsArray = Scoring.sortRanking(statsArray);
-        
-        let csvContent = "Posicao,Nome,Jogos,Vitorias,Saldo de Games,Games Pro\n";
-        
-        statsArray.forEach((stat, index) => {
-            let matches = stat.matches || 0;
-            let name = stat.obj.name.replace(/"/g, '""');
-            csvContent += `${index + 1},"${name}",${matches},${stat.wins},${stat.sg},${stat.pro}\n`;
-        });
+        let csvContent = "";
+
+        if (App.state.format === 'teams') {
+            const { teamStats, pairStats } = TeamsMode.calculateStats(App.state.teams, App.state.tournament.rounds);
+            const sortedTeams = TeamsMode.sortTeamStats(Object.values(teamStats));
+            
+            csvContent += "CLASSIFICACAO DAS EQUIPES\nPosicao,Equipe,Jogos,Vitorias,Derrotas,Saldo de Games,Games Pro,Games Contra,Aproveitamento\n";
+            sortedTeams.forEach((ts, index) => {
+                const total = ts.pro + ts.against;
+                const eff = total > 0 ? Math.round((ts.pro / total) * 100) + "%" : "0%";
+                csvContent += `${index + 1},"${ts.team.name.replace(/"/g, '""')}",${ts.matches},${ts.wins},${ts.losses},${ts.sg},${ts.pro},${ts.against},${eff}\n`;
+            });
+
+            csvContent += "\nDESEMPENHO DAS DUPLAS\nPosicao,Equipe,Dupla,Jogos,Vitorias,Saldo de Games,Games Pro\n";
+            let pairsList = Object.values(pairStats).map(p => ({ obj: p.pair, ...p }));
+            pairsList = Scoring.sortRanking(pairsList);
+            pairsList.forEach((stat, index) => {
+                csvContent += `${index + 1},"${stat.team ? stat.team.name.replace(/"/g, '""') : ''}","${stat.obj.name.replace(/"/g, '""')}",${stat.matches || 0},${stat.wins},${stat.sg},${stat.pro}\n`;
+            });
+        } else {
+            let statsArray = Object.values(App.state.stats);
+            statsArray = Scoring.sortRanking(statsArray);
+            
+            csvContent = "Posicao,Nome,Jogos,Vitorias,Saldo de Games,Games Pro\n";
+            
+            statsArray.forEach((stat, index) => {
+                let matches = stat.matches || 0;
+                let name = stat.obj.name.replace(/"/g, '""');
+                csvContent += `${index + 1},"${name}",${matches},${stat.wins},${stat.sg},${stat.pro}\n`;
+            });
+        }
         
         const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
@@ -1035,7 +1527,22 @@ const App = {
             return;
         }
 
-        let text = `🎾 *Resultados do Torneio* 🎾\n\n`;
+        let text = "";
+
+        if (App.state.format === 'teams') {
+            const { teamStats } = TeamsMode.calculateStats(App.state.teams, App.state.tournament.rounds);
+            const sortedTeams = TeamsMode.sortTeamStats(Object.values(teamStats));
+            
+            text = `🛡️ *TORNEIO DE EQUIPES - REY PLAY* 🛡️\n\n`;
+            text += `📊 *CLASSIFICAÇÃO GERAL DAS EQUIPES*\n`;
+            sortedTeams.forEach((ts, idx) => {
+                const medal = idx === 0 ? '🥇 ' : (idx === 1 ? '🥈 ' : (idx === 2 ? '🥉 ' : ''));
+                text += `${medal}*${ts.team.name}*: ${ts.wins}V (${ts.matches}J) | Saldo: ${ts.sg > 0 ? '+' : ''}${ts.sg} | ${ts.pro} pró\n`;
+            });
+            text += `\n🎾 *RESULTADOS DOS JOGOS*\n\n`;
+        } else {
+            text = `🎾 *Resultados do Torneio* 🎾\n\n`;
+        }
 
         App.state.tournament.rounds.forEach(round => {
             text += `🏆 *Rodada ${round.roundNum}*\n`;
@@ -1052,6 +1559,9 @@ const App = {
                     let p4 = dummies.includes(match.t2[1].id) ? `${match.t2[1].name} 🃏` : match.t2[1].name;
                     t1Name = `${p1} & ${p2}`;
                     t2Name = `${p3} & ${p4}`;
+                } else if (App.state.format === 'teams') {
+                    t1Name = `[${match.team1Name}] ${match.t1.name}`;
+                    t2Name = `[${match.team2Name}] ${match.t2.name}`;
                 } else {
                     t1Name = match.t1.name;
                     t2Name = match.t2.name;
