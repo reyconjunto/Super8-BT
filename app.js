@@ -326,7 +326,8 @@ const App = {
 
     goToPlayersScreen: () => {
         const numCourtsInput = document.getElementById('num-courts-input');
-        App.state.numCourts = parseInt(numCourtsInput.value) || 1;
+        const parsedCourts = parseInt(numCourtsInput.value);
+        App.state.numCourts = (!isNaN(parsedCourts) && parsedCourts >= 0) ? parsedCourts : 0;
         
         if (App.state.format === 'teams') {
             App.state.numTeams = parseInt(document.getElementById('num-teams-input').value) || 2;
@@ -768,6 +769,196 @@ const App = {
         }
     },
 
+    renderCourtsDashboard: () => {
+        const container = document.getElementById('courts-dashboard');
+        if (!container) return;
+
+        const numCourts = App.state.numCourts || 0;
+        if (numCourts === 0 || !App.state.tournament || !App.state.tournament.rounds) {
+            container.style.display = 'none';
+            container.innerHTML = '';
+            return;
+        }
+
+        container.style.display = 'block';
+
+        // Mapear partidas ocupando quadras atualmente
+        let busyCourts = {};
+        let waitingMatches = [];
+
+        App.state.tournament.rounds.forEach(round => {
+            round.matches.forEach(m => {
+                if (!m.finished) {
+                    if (m.court && m.court > 0 && m.court <= numCourts) {
+                        busyCourts[m.court] = m;
+                    } else if (!m.court) {
+                        waitingMatches.push(m);
+                    }
+                }
+            });
+        });
+
+        let courtsCardsHtml = '';
+        for (let c = 1; c <= numCourts; c++) {
+            const match = busyCourts[c];
+            if (match) {
+                let p1 = match.t1.name;
+                let p2 = match.t2.name;
+                if (App.state.format === 'teams') {
+                    p1 = `[${match.team1Name}] ${match.t1.name}`;
+                    p2 = `[${match.team2Name}] ${match.t2.name}`;
+                }
+
+                courtsCardsHtml += `
+                    <div class="court-card busy" style="background: rgba(255, 123, 0, 0.08); border: 1px solid var(--sunset-orange); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; text-align: left;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <span style="font-weight: 800; font-size: 0.95rem; color: var(--sunset-orange);">🎾 Quadra ${c}</span>
+                            <span style="font-size: 0.7rem; font-weight: 700; background: var(--sunset-orange); color: #fff; padding: 2px 6px; border-radius: 4px;">EM JOGO</span>
+                        </div>
+                        <div style="font-size: 0.85rem; font-weight: 600; color: #fff; margin-bottom: 8px; line-height: 1.3;">
+                            ${p1} <span style="color: var(--sunset-yellow);">x</span> ${p2}
+                        </div>
+                        <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                            <button class="btn-focus-match" data-mid="${match.id}" style="background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); color: var(--sand-primary); font-size: 0.75rem; padding: 4px 8px; border-radius: 4px; cursor: pointer;">⚡ Ver Jogo</button>
+                            ${!App.isViewMode ? `<button class="btn-release-court-card" data-mid="${match.id}" style="background: rgba(230, 57, 70, 0.2); border: 1px solid var(--sunset-red); color: #ff6b6b; font-size: 0.75rem; padding: 4px 8px; border-radius: 4px; cursor: pointer;" title="Liberar quadra">✕ Desocupar</button>` : ''}
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Quadra livre
+                let nextMatchBtnHtml = '';
+                if (waitingMatches.length > 0 && !App.isViewMode) {
+                    const nextM = waitingMatches[0];
+                    let nextP1 = nextM.t1.name;
+                    let nextP2 = nextM.t2.name;
+                    if (App.state.format === 'teams') {
+                        nextP1 = `[${nextM.team1Name}] ${nextM.t1.name}`;
+                        nextP2 = `[${nextM.team2Name}] ${nextM.t2.name}`;
+                    }
+
+                    nextMatchBtnHtml = `
+                        <button class="btn-call-next-court" data-court="${c}" style="background: linear-gradient(135deg, #00E676, #00B0FF); border: none; color: #000; font-weight: 700; font-size: 0.75rem; padding: 6px 10px; border-radius: 6px; cursor: pointer; width: 100%; margin-top: 6px;" title="Chamar próximo jogo para esta quadra">
+                            ➕ Chamar Próximo: ${nextP1} x ${nextP2}
+                        </button>
+                    `;
+                } else {
+                    nextMatchBtnHtml = `
+                        <div style="font-size: 0.75rem; color: var(--sand-secondary); margin-top: 4px;">Fila vazia</div>
+                    `;
+                }
+
+                courtsCardsHtml += `
+                    <div class="court-card free" style="background: rgba(74, 222, 128, 0.05); border: 1px solid rgba(74, 222, 128, 0.4); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; text-align: left;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <span style="font-weight: 800; font-size: 0.95rem; color: #4ade80;">🟢 Quadra ${c}</span>
+                            <span style="font-size: 0.7rem; font-weight: 700; background: rgba(74, 222, 128, 0.2); color: #4ade80; padding: 2px 6px; border-radius: 4px;">LIVRE</span>
+                        </div>
+                        ${nextMatchBtnHtml}
+                    </div>
+                `;
+            }
+        }
+
+        container.innerHTML = `
+            <div class="glass-card" style="padding: 16px; border-radius: 14px; background: rgba(10, 25, 47, 0.85); border: 1px solid var(--glass-border);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                    <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--sunset-yellow);">
+                        🎾 Fila Dinâmica de Quadras (${numCourts} Quadras)
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--sand-secondary);">
+                        Aguardando na fila: <strong>${waitingMatches.length} jogos</strong>
+                    </div>
+                </div>
+                <div class="courts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px;">
+                    ${courtsCardsHtml}
+                </div>
+            </div>
+        `;
+
+        // Event listeners
+        container.querySelectorAll('.btn-focus-match').forEach(btn => {
+            btn.addEventListener('click', (e) => App.scrollToMatch(e.currentTarget.dataset.mid));
+        });
+        container.querySelectorAll('.btn-release-court-card').forEach(btn => {
+            btn.addEventListener('click', (e) => App.releaseCourt(e.currentTarget.dataset.mid));
+        });
+        container.querySelectorAll('.btn-call-next-court').forEach(btn => {
+            btn.addEventListener('click', (e) => App.callNextToCourt(parseInt(e.currentTarget.dataset.court)));
+        });
+    },
+
+    assignCourt: (matchId, courtNum) => {
+        if (App.isViewMode || !App.state.tournament || !App.state.tournament.rounds) return;
+
+        // Se outra partida já estiver nesta quadra e não estiver finalizada, desocupa a anterior
+        if (courtNum > 0) {
+            App.state.tournament.rounds.forEach(r => {
+                r.matches.forEach(m => {
+                    if (m.id !== matchId && m.court === courtNum && !m.finished) {
+                        m.court = null;
+                    }
+                });
+            });
+        }
+
+        // Atribui à partida alvo
+        let found = false;
+        for (const r of App.state.tournament.rounds) {
+            const m = r.matches.find(x => x.id === matchId);
+            if (m) {
+                m.court = courtNum > 0 ? courtNum : null;
+                found = true;
+                break;
+            }
+        }
+
+        if (found) {
+            App.saveState();
+            App.renderCourtsDashboard();
+            App.renderRounds();
+        }
+    },
+
+    releaseCourt: (matchId) => {
+        App.assignCourt(matchId, 0);
+    },
+
+    callNextToCourt: (courtNum) => {
+        if (App.isViewMode || !App.state.tournament || !App.state.tournament.rounds) return;
+
+        let nextMatch = null;
+        for (const r of App.state.tournament.rounds) {
+            for (const m of r.matches) {
+                if (!m.finished && !m.court) {
+                    nextMatch = m;
+                    break;
+                }
+            }
+            if (nextMatch) break;
+        }
+
+        if (nextMatch) {
+            App.assignCourt(nextMatch.id, courtNum);
+            App.scrollToMatch(nextMatch.id);
+        }
+    },
+
+    scrollToMatch: (matchId) => {
+        const el = document.getElementById(matchId);
+        if (el) {
+            if (typeof el.scrollIntoView === 'function') {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            el.style.transition = 'box-shadow 0.3s, border-color 0.3s';
+            el.style.borderColor = 'var(--sunset-yellow)';
+            el.style.boxShadow = '0 0 20px rgba(255, 184, 0, 0.5)';
+            setTimeout(() => {
+                el.style.borderColor = '';
+                el.style.boxShadow = '';
+            }, 1800);
+        }
+    },
+
     renderTeamsLiveScoreboard: () => {
         const board = document.getElementById('teams-live-scoreboard');
         if (!board) return;
@@ -860,6 +1051,7 @@ const App = {
     // --- MATCHES RENDER ---
     renderRounds: () => {
         App.renderTeamsLiveScoreboard();
+        App.renderCourtsDashboard();
 
         // Preservar valores digitados que ainda não foram salvos
         if (App.state.tournament && App.state.tournament.rounds) {
@@ -912,11 +1104,49 @@ const App = {
                     t2Name = match.t2.name;
                 }
 
-                let courtNum = (globalMatchIndex % (App.state.numCourts || 1)) + 1;
                 globalMatchIndex++;
-
                 let isReadonly = App.isViewMode || match.finished ? 'disabled' : '';
                 let groupLabel = match.groupName ? `<div style="font-size:0.75rem; color:var(--sunset-yellow); margin-bottom:5px; font-weight:bold;">[${match.groupName}]</div>` : '';
+
+                // Componente dinâmico de quadra
+                const numCourts = App.state.numCourts || 0;
+                let courtBadgeHtml = '';
+
+                if (numCourts === 0) {
+                    // Modo livre (sem controle de quadras)
+                    courtBadgeHtml = `<div style="font-size: 0.75rem; color: var(--sand-secondary); font-weight: 600;">#Jogo ${globalMatchIndex}</div>`;
+                } else {
+                    // Modo com fila dinâmica de quadras
+                    if (match.finished) {
+                        const courtText = match.court ? `Quadra ${match.court}` : 'Sem Quadra';
+                        courtBadgeHtml = `<div class="court-badge" style="justify-self: start; background: rgba(255,255,255,0.06); color: var(--sand-secondary); border-color: rgba(255,255,255,0.1); font-size: 0.75rem;">${courtText}</div>`;
+                    } else if (match.court) {
+                        courtBadgeHtml = `
+                            <div style="display: flex; align-items: center; gap: 4px; justify-self: start;">
+                                <div class="court-badge" style="background: rgba(74, 222, 128, 0.2); color: #4ade80; border-color: #4ade80; font-weight: 700; font-size: 0.75rem;">
+                                    🎾 Quadra ${match.court}
+                                </div>
+                                ${!App.isViewMode ? `<button class="btn-quick-release" data-mid="${match.id}" style="background: none; border: none; color: #ff6b6b; cursor: pointer; font-size: 0.9rem; padding: 2px 4px;" title="Desocupar Quadra">✕</button>` : ''}
+                            </div>
+                        `;
+                    } else {
+                        // Na fila
+                        let optionsHtml = `<option value="">⏳ Fila (Sem Quadra)</option>`;
+                        for (let c = 1; c <= numCourts; c++) {
+                            optionsHtml += `<option value="${c}">🎾 Quadra ${c}</option>`;
+                        }
+
+                        if (!App.isViewMode) {
+                            courtBadgeHtml = `
+                                <select class="court-select-input" data-mid="${match.id}" style="background: rgba(0,0,0,0.5); color: var(--sunset-yellow); border: 1px solid var(--glass-border); border-radius: 6px; padding: 4px 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer;">
+                                    ${optionsHtml}
+                                </select>
+                            `;
+                        } else {
+                            courtBadgeHtml = `<div class="court-badge" style="justify-self: start; background: rgba(255,255,255,0.05); color: var(--sand-secondary); font-size: 0.75rem;">⏳ Na Fila</div>`;
+                        }
+                    }
+                }
 
                 return `
                     <div class="match-card" id="${match.id}">
@@ -927,7 +1157,7 @@ const App = {
                             <div class="team"><span>${t2Name}</span></div>
                         </div>
                         <div class="match-score" style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px;">
-                            <div class="court-badge" style="justify-self: start; position: relative;">Quadra ${courtNum}</div>
+                            <div style="justify-self: start;">${courtBadgeHtml}</div>
                             <div style="display: flex; justify-content: center; align-items: center; gap: 10px;">
                                 <input type="number" min="0" class="score-input s-out" data-mid="${match.id}" data-team="1" ${isReadonly} value="${match.score1 !== null ? match.score1 : ''}">
                                 <span class="vs">X</span>
@@ -959,6 +1189,19 @@ const App = {
         });
         document.querySelectorAll('.btn-edit-match').forEach(btn => {
             btn.addEventListener('click', (e) => App.editMatch(e.target.dataset.mid, parseInt(e.target.dataset.rn)));
+        });
+
+        document.querySelectorAll('.court-select-input').forEach(sel => {
+            sel.addEventListener('change', (e) => {
+                const cVal = parseInt(e.target.value);
+                App.assignCourt(e.target.dataset.mid, (!isNaN(cVal) && cVal > 0) ? cVal : 0);
+            });
+        });
+
+        document.querySelectorAll('.btn-quick-release').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                App.releaseCourt(e.currentTarget.dataset.mid);
+            });
         });
     },
 

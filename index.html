@@ -74,8 +74,8 @@
                     <hr style="border: none; border-top: 1px dashed rgba(255,255,255,0.1); margin: 20px 0;">
                     
                     <label for="num-courts-input" style="font-weight: 700; font-size: 1.2rem; display: block; margin-bottom: 15px; color: var(--sunset-yellow);">Número de Quadras</label>
-                    <input type="number" id="num-courts-input" class="large-number-input" value="2" min="1">
-                    <p style="font-size: 0.9rem; margin-top: 15px; margin-bottom: 0; color: var(--sand-secondary);">Quantas quadras estarão disponíveis simultaneamente.</p>
+                    <input type="number" id="num-courts-input" class="large-number-input" value="2" min="0">
+                    <p style="font-size: 0.9rem; margin-top: 15px; margin-bottom: 0; color: var(--sand-secondary);">Quantidade de quadras para fila dinâmica (digite 0 se não quiser controlar quadras).</p>
                     
                     <div id="individual-setup" style="display: none; margin-top: 15px; text-align: left; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px;">
                         <label for="max-matches-input" style="font-weight: 700; font-size: 1.1rem; display: block; margin-bottom: 10px; color: var(--sunset-yellow);">Nº Máximo de Partidas por Atleta</label>
@@ -207,6 +207,7 @@
                     <strong style="color: var(--sunset-yellow);">🃏 Jogadores Curingas (Amistoso)</strong><br>
                     Para garantir que todos joguem a mesma quantidade de partidas, alguns jogadores podem atuar como "Curingas" para completar a quadra. Os placares marcados com o emoji 🃏 <strong>não somam e nem subtraem pontos</strong> para esses jogadores no ranking geral.
                 </div>
+                <div id="courts-dashboard" style="display: none; margin-bottom: 20px;"></div>
                 <div id="rounds-container">
                     <!-- Gerado via JS -->
                 </div>
