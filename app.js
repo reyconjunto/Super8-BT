@@ -720,7 +720,7 @@ const App = {
             document.getElementById('rank-name-col').innerText = 'Dupla';
         }
 
-        App.autoAssignCourts();
+        // Controle manual via seletor
         App.saveState();
         
         const newUrl = window.location.pathname + '?admin=' + App.state.tournamentId;
@@ -805,7 +805,8 @@ const App = {
         }
     },
 
-    renderCourtsDashboard: () => {
+    renderCourtsDashboard: () => { return;
+
         const container = document.getElementById('courts-dashboard');
         if (!container) return;
 
@@ -1152,14 +1153,33 @@ const App = {
                     // Modo livre (sem controle de quadras)
                     courtBadgeHtml = `<div style="font-size: 0.75rem; color: var(--sand-secondary); font-weight: 600;">#Jogo ${globalMatchIndex}</div>`;
                 } else {
-                    // Modo automático de quadras
+                    // Seletor prático de quadra para o organizador
                     if (match.finished) {
                         const courtText = match.court ? `Quadra ${match.court}` : "Finalizado";
                         courtBadgeHtml = `<div class="court-badge" style="justify-self: start; background: rgba(255,255,255,0.06); color: var(--sand-secondary); border-color: rgba(255,255,255,0.1); font-size: 0.75rem;">${courtText}</div>`;
-                    } else if (match.court) {
-                        courtBadgeHtml = `<div class="court-badge" style="justify-self: start; background: rgba(74, 222, 128, 0.2); color: #4ade80; border-color: #4ade80; font-weight: 700; font-size: 0.8rem; box-shadow: 0 0 10px rgba(74, 222, 128, 0.2);">🎾 Quadra ${match.court}</div>`;
+                    } else if (App.isViewMode) {
+                        if (match.court) {
+                            courtBadgeHtml = `<div class="court-badge" style="justify-self: start; background: rgba(74, 222, 128, 0.2); color: #4ade80; border-color: #4ade80; font-weight: 700; font-size: 0.8rem;">🎾 Quadra ${match.court}</div>`;
+                        } else {
+                            courtBadgeHtml = `<div class="court-badge" style="justify-self: start; background: rgba(255, 123, 0, 0.15); color: var(--sunset-orange); border-color: var(--sunset-orange); font-size: 0.75rem; font-weight: 600;">⏳ Na Fila</div>`;
+                        }
                     } else {
-                        courtBadgeHtml = `<div class="court-badge" style="justify-self: start; background: rgba(255, 123, 0, 0.15); color: var(--sunset-orange); border-color: var(--sunset-orange); font-size: 0.75rem; font-weight: 600;">⏳ Na Fila</div>`;
+                        // Modo Admin: Seletor direto e prático no card
+                        let optionsHtml = `<option value="0" ${!match.court ? "selected" : ""}>⏳ Na Fila</option>`;
+                        for (let c = 1; c <= numCourts; c++) {
+                            const isSel = match.court === c ? "selected" : "";
+                            optionsHtml += `<option value="${c}" ${isSel}>🎾 Quadra ${c}</option>`;
+                        }
+                        const isAssigned = !!match.court;
+                        const selectBg = isAssigned ? "rgba(74, 222, 128, 0.2)" : "rgba(255, 123, 0, 0.15)";
+                        const selectColor = isAssigned ? "#4ade80" : "var(--sunset-orange)";
+                        const selectBorder = isAssigned ? "#4ade80" : "rgba(255, 123, 0, 0.4)";
+
+                        courtBadgeHtml = `
+                            <select class="court-select-input" data-mid="${match.id}" style="background: ${selectBg}; color: ${selectColor}; border: 1px solid ${selectBorder}; border-radius: 8px; padding: 4px 8px; font-size: 0.78rem; font-weight: 700; cursor: pointer; outline: none;">
+                                ${optionsHtml}
+                            </select>
+                        `;
                     }
                 }
 
@@ -1259,7 +1279,7 @@ const App = {
         }
 
         // Libera a quadra e chama automaticamente o próximo jogo da fila
-        App.autoAssignCourts();
+        // Controle manual via seletor
 
         const allFinished = round.matches.length > 0 && round.matches.every(m => m.finished);
 
