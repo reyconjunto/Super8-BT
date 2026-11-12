@@ -1,9 +1,14 @@
 // Teams Mode Logic for Super 8 BT
 const TeamsMode = {
     /**
-     * Gera as rodadas e confrontos do torneio de equipes.
+     * Gera as rodadas e confrontos do torneio de equipes com MISTURA MÁXIMA.
      * Regra: Cada time possui D duplas. Duplas do mesmo time NÃO se enfrentam.
      * Cada dupla enfrenta exatamente 1 vez cada dupla dos outros times.
+     *
+     * Os jogos são distribuídos dinamicamente de forma intercalada:
+     * - Todos os times entram em quadra desde a Rodada 1
+     * - Nenhuma dupla joga duas partidas no mesmo momento / na mesma rodada
+     * - Máximo tempo de descanso entre jogos para cada dupla
      *
      * @param {Array} teams - Lista de times contendo { id, name, color, pairs }
      * @param {number} numCourts - Quantidade de quadras disponíveis simultâneas
@@ -13,114 +18,134 @@ const TeamsMode = {
         const numTeams = teams.length;
         if (numTeams < 2) return { type: 'teams', rounds: [], teams };
 
-        const pairsPerTeam = teams[0].pairs.length;
-        let globalRounds = [];
+        // 1. Gera todos os confrontos necessários (todas as duplas contra todas as duplas adversárias)
+        let unplayed = [];
+        let matchCounter = 0;
 
-        // Caso especial: exatamente 2 times
-        if (numTeams === 2) {
-            const teamA = teams[0];
-            const teamB = teams[1];
+        for (let i = 0; i < numTeams; i++) {
+            for (let j = i + 1; j < numTeams; j++) {
+                const teamA = teams[i];
+                const teamB = teams[j];
 
-            for (let shift = 0; shift < pairsPerTeam; shift++) {
-                let matches = [];
-                for (let i = 0; i < pairsPerTeam; i++) {
-                    const p1 = teamA.pairs[i];
-                    const p2 = teamB.pairs[(i + shift) % pairsPerTeam];
+                for (let pa = 0; pa < teamA.pairs.length; pa++) {
+                    for (let pb = 0; pb < teamB.pairs.length; pb++) {
+                        const pairA = teamA.pairs[pa];
+                        const pairB = teamB.pairs[pb];
 
-                    matches.push({
-                        id: `tm_r${shift}_m${i}`,
-                        team1Id: teamA.id,
-                        team1Name: teamA.name,
-                        team1Color: teamA.color,
-                        team2Id: teamB.id,
-                        team2Name: teamB.name,
-                        team2Color: teamB.color,
-                        t1: p1,
-                        t2: p2,
-                        score1: null,
-                        score2: null,
-                        finished: false
-                    });
-                }
-
-                globalRounds.push({
-                    roundNum: shift + 1,
-                    matches: matches
-                });
-            }
-
-            return {
-                type: 'teams',
-                rounds: globalRounds,
-                teams: teams
-            };
-        }
-
-        // Caso geral: 3 ou mais times (Round Robin cíclico entre os times)
-        let teamIndices = Array.from({ length: numTeams }, (_, i) => i);
-        const isOdd = numTeams % 2 !== 0;
-        if (isOdd) {
-            teamIndices.push(-1); // -1 representa "Folga" (BYE)
-        }
-
-        const numTeamRounds = teamIndices.length - 1;
-        const halfSize = teamIndices.length / 2;
-
-        // 1. Pré-calcula os pares de times para cada turno do round-robin
-        let turnMatchups = [];
-        for (let tr = 0; tr < numTeamRounds; tr++) {
-            let matchups = [];
-            for (let i = 0; i < halfSize; i++) {
-                const t1Idx = teamIndices[i];
-                const t2Idx = teamIndices[teamIndices.length - 1 - i];
-
-                if (t1Idx !== -1 && t2Idx !== -1) {
-                    matchups.push([teams[t1Idx], teams[t2Idx]]);
-                }
-            }
-            turnMatchups.push(matchups);
-            // Rotacionar os times (o primeiro fica fixo, movemos os demais)
-            teamIndices.splice(1, 0, teamIndices.pop());
-        }
-
-        // 2. Gera as rodadas intercalando os confrontos de times a cada rodada!
-        // Desta forma, nenhum time fica esperando várias rodadas seguidas sem jogar.
-        let roundCounter = 1;
-        for (let shift = 0; shift < pairsPerTeam; shift++) {
-            for (let tr = 0; tr < numTeamRounds; tr++) {
-                const currentMatchups = turnMatchups[tr];
-                let matches = [];
-                let matchIdx = 0;
-
-                currentMatchups.forEach(([teamA, teamB]) => {
-                    for (let i = 0; i < pairsPerTeam; i++) {
-                        const p1 = teamA.pairs[i];
-                        const p2 = teamB.pairs[(i + shift) % pairsPerTeam];
-
-                        matches.push({
-                            id: `tm_s${shift}_tr${tr}_m${matchIdx++}`,
+                        unplayed.push({
+                            id: `tm_m_${matchCounter++}`,
                             team1Id: teamA.id,
                             team1Name: teamA.name,
                             team1Color: teamA.color,
                             team2Id: teamB.id,
                             team2Name: teamB.name,
                             team2Color: teamB.color,
-                            t1: p1,
-                            t2: p2,
+                            t1: pairA,
+                            t2: pairB,
                             score1: null,
                             score2: null,
-                            finished: false
+                            finished: false,
+                            pairIds: [pairA.id, pairB.id],
+                            teamIds: [teamA.id, teamB.id]
                         });
                     }
-                });
-
-                if (matches.length > 0) {
-                    globalRounds.push({
-                        roundNum: roundCounter++,
-                        matches: matches
-                    });
                 }
             }
+        }
+
+        // 2. Agendamento equilibrado e intercalado
+        // Cada rodada visual tem o número de quadras (ou 2 se numCourts for menor)
+        const targetMatchesPerRound = Math.max(numCourts || 0, 2);
+
+        let globalRounds = [];
+        let currentRoundMatches = [];
+        let usedPairsInRound = new Set();
+        let lastPlayedPairs = new Set();
+
+        let teamMatchCounts = {};
+        let pairMatchCounts = {};
+        teams.forEach(t => {
+            teamMatchCounts[t.id] = 0;
+            t.pairs.forEach(p => {
+                pairMatchCounts[p.id] = 0;
+            });
+        });
+
+        let roundNumber = 1;
+
+        while (unplayed.length > 0) {
+            let bestIdx = -1;
+            let bestScore = -9999999;
+
+            for (let idx = 0; idx < unplayed.length; idx++) {
+                const m = unplayed[idx];
+
+                // Regra estrita: nenhuma dupla joga 2 vezes na mesma rodada
+                if (usedPairsInRound.has(m.pairIds[0]) || usedPairsInRound.has(m.pairIds[1])) {
+                    continue;
+                }
+
+                let score = 0;
+
+                // Penaliza duplas que jogaram na rodada imediatamente anterior (garante descanso)
+                if (lastPlayedPairs.has(m.pairIds[0])) score -= 300;
+                if (lastPlayedPairs.has(m.pairIds[1])) score -= 300;
+
+                // Favorece times que jogaram menos partidas no total (mantém todos os times ativos)
+                score -= (teamMatchCounts[m.teamIds[0]] || 0) * 25;
+                score -= (teamMatchCounts[m.teamIds[1]] || 0) * 25;
+
+                // Favorece duplas que jogaram menos partidas
+                score -= (pairMatchCounts[m.pairIds[0]] || 0) * 10;
+                score -= (pairMatchCounts[m.pairIds[1]] || 0) * 10;
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestIdx = idx;
+                }
+            }
+
+            if (bestIdx !== -1 && currentRoundMatches.length < targetMatchesPerRound) {
+                const selected = unplayed.splice(bestIdx, 1)[0];
+                currentRoundMatches.push(selected);
+                usedPairsInRound.add(selected.pairIds[0]);
+                usedPairsInRound.add(selected.pairIds[1]);
+                teamMatchCounts[selected.teamIds[0]] = (teamMatchCounts[selected.teamIds[0]] || 0) + 1;
+                teamMatchCounts[selected.teamIds[1]] = (teamMatchCounts[selected.teamIds[1]] || 0) + 1;
+                pairMatchCounts[selected.pairIds[0]] = (pairMatchCounts[selected.pairIds[0]] || 0) + 1;
+                pairMatchCounts[selected.pairIds[1]] = (pairMatchCounts[selected.pairIds[1]] || 0) + 1;
+            } else {
+                // Fecha a rodada atual e inicia uma nova rodada
+                if (currentRoundMatches.length > 0) {
+                    globalRounds.push({
+                        roundNum: roundNumber++,
+                        matches: currentRoundMatches
+                    });
+                    lastPlayedPairs = new Set(usedPairsInRound);
+                    currentRoundMatches = [];
+                    usedPairsInRound.clear();
+                } else {
+                    // Fallback de segurança se nenhuma partida puder ser encaixada sem violar
+                    const forced = unplayed.splice(0, 1)[0];
+                    currentRoundMatches.push(forced);
+                    usedPairsInRound.add(forced.pairIds[0]);
+                    usedPairsInRound.add(forced.pairIds[1]);
+                    globalRounds.push({
+                        roundNum: roundNumber++,
+                        matches: currentRoundMatches
+                    });
+                    lastPlayedPairs = new Set(usedPairsInRound);
+                    currentRoundMatches = [];
+                    usedPairsInRound.clear();
+                }
+            }
+        }
+
+        if (currentRoundMatches.length > 0) {
+            globalRounds.push({
+                roundNum: roundNumber++,
+                matches: currentRoundMatches
+            });
         }
 
         return {
