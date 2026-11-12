@@ -658,6 +658,41 @@ const App = {
     },
 
     // --- TOURNAMENT START ---
+    
+    autoAssignCourts: () => {
+        const numCourts = App.state.numCourts || 0;
+        if (numCourts <= 0 || !App.state.tournament || !App.state.tournament.rounds) return;
+
+        // Descobrir quais quadras (1..numCourts) estão ocupadas por partidas em andamento
+        let occupiedCourts = new Set();
+        App.state.tournament.rounds.forEach(r => {
+            r.matches.forEach(m => {
+                if (!m.finished && m.court && m.court > 0 && m.court <= numCourts) {
+                    occupiedCourts.add(m.court);
+                }
+            });
+        });
+
+        // Para cada quadra livre, pega o primeiro jogo na fila e coloca nela
+        for (let c = 1; c <= numCourts; c++) {
+            if (!occupiedCourts.has(c)) {
+                // Procurar próxima partida sem quadra e não finalizada
+                let assigned = false;
+                for (const r of App.state.tournament.rounds) {
+                    for (const m of r.matches) {
+                        if (!m.finished && !m.court) {
+                            m.court = c;
+                            occupiedCourts.add(c);
+                            assigned = true;
+                            break;
+                        }
+                    }
+                    if (assigned) break;
+                }
+            }
+        }
+    },
+
     startTournament: () => {
         App.initStats();
 
@@ -685,6 +720,7 @@ const App = {
             document.getElementById('rank-name-col').innerText = 'Dupla';
         }
 
+        App.autoAssignCourts();
         App.saveState();
         
         const newUrl = window.location.pathname + '?admin=' + App.state.tournamentId;
@@ -1116,35 +1152,14 @@ const App = {
                     // Modo livre (sem controle de quadras)
                     courtBadgeHtml = `<div style="font-size: 0.75rem; color: var(--sand-secondary); font-weight: 600;">#Jogo ${globalMatchIndex}</div>`;
                 } else {
-                    // Modo com fila dinâmica de quadras
+                    // Modo automático de quadras
                     if (match.finished) {
-                        const courtText = match.court ? `Quadra ${match.court}` : 'Sem Quadra';
+                        const courtText = match.court ? `Quadra ${match.court}` : "Finalizado";
                         courtBadgeHtml = `<div class="court-badge" style="justify-self: start; background: rgba(255,255,255,0.06); color: var(--sand-secondary); border-color: rgba(255,255,255,0.1); font-size: 0.75rem;">${courtText}</div>`;
                     } else if (match.court) {
-                        courtBadgeHtml = `
-                            <div style="display: flex; align-items: center; gap: 4px; justify-self: start;">
-                                <div class="court-badge" style="background: rgba(74, 222, 128, 0.2); color: #4ade80; border-color: #4ade80; font-weight: 700; font-size: 0.75rem;">
-                                    🎾 Quadra ${match.court}
-                                </div>
-                                ${!App.isViewMode ? `<button class="btn-quick-release" data-mid="${match.id}" style="background: none; border: none; color: #ff6b6b; cursor: pointer; font-size: 0.9rem; padding: 2px 4px;" title="Desocupar Quadra">✕</button>` : ''}
-                            </div>
-                        `;
+                        courtBadgeHtml = `<div class="court-badge" style="justify-self: start; background: rgba(74, 222, 128, 0.2); color: #4ade80; border-color: #4ade80; font-weight: 700; font-size: 0.8rem; box-shadow: 0 0 10px rgba(74, 222, 128, 0.2);">🎾 Quadra ${match.court}</div>`;
                     } else {
-                        // Na fila
-                        let optionsHtml = `<option value="">⏳ Fila (Sem Quadra)</option>`;
-                        for (let c = 1; c <= numCourts; c++) {
-                            optionsHtml += `<option value="${c}">🎾 Quadra ${c}</option>`;
-                        }
-
-                        if (!App.isViewMode) {
-                            courtBadgeHtml = `
-                                <select class="court-select-input" data-mid="${match.id}" style="background: rgba(0,0,0,0.5); color: var(--sunset-yellow); border: 1px solid var(--glass-border); border-radius: 6px; padding: 4px 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer;">
-                                    ${optionsHtml}
-                                </select>
-                            `;
-                        } else {
-                            courtBadgeHtml = `<div class="court-badge" style="justify-self: start; background: rgba(255,255,255,0.05); color: var(--sand-secondary); font-size: 0.75rem;">⏳ Na Fila</div>`;
-                        }
+                        courtBadgeHtml = `<div class="court-badge" style="justify-self: start; background: rgba(255, 123, 0, 0.15); color: var(--sunset-orange); border-color: var(--sunset-orange); font-size: 0.75rem; font-weight: 600;">⏳ Na Fila</div>`;
                     }
                 }
 
@@ -1242,6 +1257,9 @@ const App = {
             App.addStatsToPlayer(match.t1.id, res.winsA, res.sgA, res.proA, 1);
             App.addStatsToPlayer(match.t2.id, res.winsB, res.sgB, res.proB, 1);
         }
+
+        // Libera a quadra e chama automaticamente o próximo jogo da fila
+        App.autoAssignCourts();
 
         const allFinished = round.matches.length > 0 && round.matches.every(m => m.finished);
 
