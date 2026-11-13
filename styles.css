@@ -368,7 +368,8 @@ p { font-size: 0.95rem; color: var(--sand-secondary); text-align: center; margin
     gap: 5px;
 }
 .team span {
-    font-weight: 500;
+    font-weight: 600;
+    font-size: 1.15rem;
     text-align: center;
 }
 .vs-badge {
@@ -461,19 +462,44 @@ p { font-size: 0.95rem; color: var(--sand-secondary); text-align: center; margin
     background: rgba(0,0,0,0.3);
     padding: 12px 10px;
     text-align: center;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--sunset-yellow);
-    font-size: 0.9rem;
+    font-size: 1rem;
 }
 .ranking-table th#rank-name-col { text-align: left; }
 .ranking-table td {
     padding: 12px 10px;
     text-align: center;
     border-top: 1px solid rgba(255,255,255,0.05);
+    font-size: 1.05rem;
 }
 .ranking-table td.player-name {
     text-align: left;
-    font-weight: 500;
+    font-weight: 600;
+    font-size: 1.2rem;
+    letter-spacing: 0.3px;
+}
+.ranking-table td.player-name .team-tag {
+    display: inline-block;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 12px;
+    margin-right: 8px;
+    color: #fff;
+    vertical-align: middle;
+}
+.btn-edit-name, .btn-edit-team-name {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    margin-left: 6px;
+    vertical-align: middle;
+    transition: transform 0.2s;
+}
+.btn-edit-name:hover, .btn-edit-team-name:hover {
+    transform: scale(1.2);
 }
 .ranking-table tr:nth-child(even) { background: rgba(0,0,0,0.1); }
 .ranking-table tr:hover { background: rgba(255,123,0,0.05); }

@@ -177,6 +177,7 @@ const TeamsMode = {
             t.pairs.forEach(p => {
                 pairStats[p.id] = {
                     pair: p,
+                    obj: p,
                     team: t,
                     wins: 0,
                     losses: 0,

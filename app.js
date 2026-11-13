@@ -1565,9 +1565,9 @@ const App = {
                     <tr>
                         <td>${index + 1}</td>
                         <td class="player-name">
-                            <span style="display:inline-block; font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:10px; margin-right:6px; background:${tColor}; color:#fff;">${tName}</span>
+                            <span class="team-tag" style="background:${tColor};">${tName}</span>
                             ${stat.obj.name}
-                            ${!App.isViewMode ? `<button class="btn-edit-name" data-id="${stat.obj.id}" style="background:none; border:none; cursor:pointer; font-size:0.8rem; margin-left:5px;" title="Editar Nome da Dupla">✏️</button>` : ''}
+                            ${!App.isViewMode ? `<button class="btn-edit-name" data-id="${stat.obj.id}" title="Editar Nome da Dupla">✏️</button>` : ''}
                             <span class="medal">${medal}</span>
                         </td>
                         <td><strong>${stat.matches || 0}</strong></td>
@@ -1703,18 +1703,44 @@ const App = {
 
     editPlayerName: (id) => {
         if (App.isViewMode) return;
-        const stat = App.state.stats[id];
-        if (!stat) return;
+        const stat = App.state.stats ? App.state.stats[id] : null;
+        let oldName = '';
+        if (stat) {
+            oldName = (stat.obj && stat.obj.name) || (stat.pair && stat.pair.name) || '';
+        }
+        if (!oldName && App.state.teams) {
+            for (const t of App.state.teams) {
+                const p = t.pairs ? t.pairs.find(x => x.id === id) : null;
+                if (p) {
+                    oldName = p.name;
+                    break;
+                }
+            }
+        }
+        if (!oldName && App.state.fixedPairs) {
+            const fp = App.state.fixedPairs.find(x => x.id === id);
+            if (fp) oldName = fp.name;
+        }
+        if (!oldName && App.state.players) {
+            const pl = App.state.players.find(x => x.id === id);
+            if (pl) oldName = pl.name;
+        }
         
-        let oldName = stat.obj.name;
         let newName = prompt("Corrigir nome:", oldName);
         if (!newName || newName.trim() === '' || newName.trim() === oldName) return;
         newName = newName.trim();
 
+        const visited = new Set();
         const updateNameInObj = (obj) => {
-            if (!obj || typeof obj !== 'object') return;
-            if (obj.id === id && obj.name !== undefined) {
-                obj.name = newName;
+            if (!obj || typeof obj !== 'object' || visited.has(obj)) return;
+            visited.add(obj);
+            if (obj.id === id) {
+                if (obj.name !== undefined) {
+                    obj.name = newName;
+                }
+                if (obj.p1 && obj.p1.name !== undefined) {
+                    obj.p1.name = newName;
+                }
             }
             for (let key in obj) {
                 if (Object.prototype.hasOwnProperty.call(obj, key)) {
