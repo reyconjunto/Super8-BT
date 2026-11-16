@@ -20,6 +20,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css?v=3.3">
+<link rel="stylesheet" href="ux.css?v=20261116-1">
 </head>
 <body>
     <div class="background-overlay"></div>
@@ -124,7 +125,7 @@
                 </div>
 
                 <div class="actions mt-4">
-                    <button class="btn btn-primary" id="btn-next-to-players" disabled>Avançar para Elenco</button>
+                    <button class="btn btn-primary" id="btn-next-to-players" disabled>Continuar para participantes</button>
                 </div>
 
                 <!-- Regras / Critérios de Desempate -->
@@ -152,7 +153,7 @@
         <section id="setup-players-screen" class="screen">
             <div class="glass-card">
                 <button class="btn btn-back" id="btn-back-to-format">← Formato</button>
-                <h2 id="players-title">Elenco</h2>
+                <h2 id="players-title">Participantes</h2>
                 <p>Cadastre os jogadores. Marque a estrela ⭐ para sinalizar os <strong>Cabeças de Chave</strong>.</p>
                 
                 <div class="players-list" id="players-list">
@@ -190,10 +191,10 @@
         <section id="tournament-screen" class="screen">
             <!-- Barra de Ações Administrativas Compacta -->
             <div class="admin-toolbar">
-                <button class="btn btn-secondary btn-chip admin-only" id="btn-share-link" title="Compartilhar link de espectador em tempo real">🔗 Link Ao Vivo</button>
-                <button class="btn btn-secondary btn-chip admin-only" id="btn-share-admin-link" title="Copiar link de administração do torneio">🔑 Link Admin</button>
+                <button class="btn btn-secondary btn-chip admin-only" id="btn-share-link" title="Compartilhar link de espectador em tempo real">Compartilhar visualização</button>
+                <button class="btn btn-secondary btn-chip admin-only" id="btn-share-admin-link" title="Copiar link de administração do torneio">Compartilhar administração</button>
                 <button class="btn btn-primary btn-chip admin-only" id="btn-generate-knockout" style="display: none;">🏆 Gerar Mata-Mata</button>
-                <button class="btn btn-secondary btn-chip btn-danger-chip admin-only" id="btn-reset-tournament">🗑️ Encerrar</button>
+                <button class="btn btn-secondary btn-chip btn-danger-chip admin-only" id="btn-reset-tournament">Sair do torneio</button>
             </div>
 
             <!-- KPIs de Progresso do Torneio -->
@@ -505,7 +506,7 @@
                 Tem alguma ideia de melhoria ou encontrou algum problema no app? Envie sua mensagem direta para a organização (<strong>rodrirey@gmail.com</strong>).
             </p>
 
-            <form id="feedback-form" onsubmit="event.preventDefault(); App.sendFeedback();">
+            <form id="feedback-form" >
                 <div style="margin-bottom: 12px; text-align: left;">
                     <label for="feedback-name-input" style="font-size: 0.85rem; font-weight: 600; color: var(--sunset-yellow); display: block; margin-bottom: 5px;">Seu Nome (opcional)</label>
                     <input type="text" id="feedback-name-input" class="filter-select" placeholder="Ex: Rodrigo" style="width: 100%; padding: 10px 12px; font-size: 0.95rem; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); color: #fff; border-radius: 8px;">
@@ -546,24 +547,8 @@
     <script src="logic/teams_mode.js?v=3.3"></script>
     <script src="logic/scoring.js?v=3.3"></script>
     <!-- Main UI App -->
-    <script src="app.js?v=3.3"></script>
-</body>
-</html>
-
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-
-    <!-- Logic Modules -->
-    <script src="logic/utils.js?v=3.3"></script>
-    <script src="logic/individual_mode.js?v=3.3"></script>
-    <script src="logic/fixed_doubles.js?v=3.3"></script>
-    <script src="logic/round_robin.js?v=3.3"></script>
-    <script src="logic/groups_mode.js?v=3.3"></script>
-    <script src="logic/knockout_mode.js?v=3.3"></script>
-    <script src="logic/teams_mode.js?v=3.3"></script>
-    <script src="logic/scoring.js?v=3.3"></script>
-    <!-- Main UI App -->
-    <script src="app.js?v=3.3"></script>
+    <script src="score-rules.js?v=20261116-1"></script>
+<script src="app.js?v=20261116-1"></script>
+<script src="ux.js?v=20261116-1"></script>
 </body>
 </html>

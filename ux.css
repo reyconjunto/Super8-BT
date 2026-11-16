@@ -1,0 +1,36 @@
+.ux-test-banner{background:#ffb800;color:#122238;padding:9px 14px;text-align:center;width:100%;font-size:.85rem;font-weight:700}.ux-nav{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}.ux-nav button{flex:1}.ux-steps{display:flex;gap:8px;list-style:none;margin:12px 0 20px}.ux-steps li{flex:1;padding:10px 6px;text-align:center;border-bottom:3px solid #405370;font-size:.9rem;color:#c5cede}.ux-steps .current{border-color:#ffb800;color:#ffcc60;font-weight:700}.ux-filters{padding:12px 14px;background:#253c56;border:1px solid #e8af38;border-radius:10px;margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:12px}.ux-filters[hidden]{display:none}.ux-filters button{white-space:nowrap}.ux-save{display:flex;gap:12px;align-items:center;justify-content:center;padding:10px;color:#b5e2c3;font-size:.85rem;min-height:42px}.ux-save.error{background:#532d31;color:#fff0ee;border-radius:8px}.ux-save button{color:inherit;background:transparent;border:1px solid currentColor;padding:7px;border-radius:6px}.ux-card{padding:18px;border:1px solid var(--glass-border);border-radius:12px;background:#11243d;margin:12px 0}.ux-card h3{margin-bottom:8px;overflow-wrap:anywhere}.ux-card p{text-align:left;margin:8px 0}.ux-home h2{text-align:left}.ux-home .actions-row{flex-wrap:wrap}.ux-home button{min-height:44px}.ux-rules{margin-top:18px;padding:16px;background:#132a43;border-radius:12px;text-align:left}.ux-rules label{display:block;margin:10px 0}.ux-rules select,.ux-rules input[type=text]{display:block;width:100%;background:#0a192f;color:#f4e8d1;padding:12px;border:1px solid #64748b;border-radius:8px;margin-top:5px;font:inherit}.ux-summary{padding:10px 0;text-align:left;font-size:.9rem;color:#ffcd72}.format-options.ux-collapsed .format-card:not(.selected){display:none}.ux-change-format{margin:10px 0}.ux-legend{padding:12px;border:1px solid #3c5068;border-radius:8px;margin:12px 0;line-height:1.6}.ux-legend summary{cursor:pointer}.ux-field-label{font-size:.8rem;color:#b7c6d7}.ux-nav .btn,.ux-filters .btn{font-size:.9rem;padding:12px}.ux-home .ux-muted{color:#b6c5d7}.ux-home input{width:100%;padding:12px;background:#0a192f;color:#fff;border:1px solid #64748b;border-radius:8px;font:inherit}.ux-title{text-align:center;margin:0 0 12px;font-size:1.3rem}.app-header{padding:12px 0}.main-logo{max-height:95px}@media(max-width:600px){.ux-nav{position:relative}.ux-steps{gap:4px}.ux-steps li{font-size:.8rem}.ux-filters{flex-wrap:wrap}.ux-filters button{width:100%}.score-pill{min-height:44px;min-width:36px}.quick-score-pills{flex-wrap:wrap}.stepper-btn{min-width:44px;min-height:44px}.filter-select{min-height:44px;font-size:16px}.p-input{font-size:16px}.admin-toolbar{flex-wrap:wrap}.admin-toolbar button{min-height:44px}.ux-save{font-size:.8rem}.modal-card{padding:18px}.app-container{padding-top:12px}}
+[hidden]{display:none!important}
+/* Compact match list: keep the call action primary until the game starts. */
+.match-card{gap:8px;padding:12px;margin-bottom:8px}
+.match-teams{padding:2px 0;gap:8px}
+.match-center-score{min-width:36px}
+.match-teams .team{padding:0;margin:0;gap:3px}
+.match-card-footer{display:grid;grid-template-columns:minmax(100px,1fr) minmax(0,1.5fr);gap:8px;padding-top:8px}
+.match-card.is-queued .match-card-footer{grid-template-columns:minmax(100px,1fr) minmax(0,1.15fr) minmax(0,1fr)}
+.match-footer-right{display:contents}
+.match-card-footer>div:first-child{min-width:0}
+.match-card-footer .court-select-input{width:100%;min-width:0;min-height:44px;padding:8px;font-size:16px}
+.match-card-footer .btn-match-action{min-height:44px;justify-content:center;padding:8px;font-size:.9rem;line-height:1.15;white-space:normal;text-align:center}
+.match-card .btn-call-now{background:linear-gradient(135deg,#ff7b00,#ed4931);color:#fff;border:0;box-shadow:none}
+.match-card .btn-call-now:disabled{background:#27394d;color:#bdc8d4;cursor:not-allowed}
+.match-card .score-secondary{background:#20334d;color:#f4e8d1;border:1px solid #43536a;box-shadow:none}
+.match-card .score-secondary:hover{background:#30455f;box-shadow:none;transform:none}
+.match-card .btn-launch-score:not(.score-secondary){box-shadow:none}
+@media(max-width:600px){
+ .match-card{padding:10px 12px;gap:7px;border-radius:12px}
+ .match-card-top{gap:6px}
+ .match-teams{padding:0;min-height:34px}
+ .match-center-score{min-width:30px}
+ .vs-badge{width:26px;height:26px}
+ .match-card .team-pair-name{font-size:1rem;line-height:1.25}
+ .match-card .team-overline{font-size:.7rem;letter-spacing:.3px}
+ .match-status-pill{padding:3px 9px}
+ .match-card.is-queued .match-card-footer{grid-template-columns:minmax(88px,.95fr) minmax(0,1.2fr) minmax(0,1fr);gap:6px}
+ .match-card-footer .btn-match-action{font-size:.84rem;padding:8px 5px}
+ .round-header{padding:10px 12px;margin-bottom:8px}
+ .round-block{margin-bottom:16px}
+}
+@media(max-width:359px){
+ .match-card.is-queued .match-card-footer{grid-template-columns:1fr 1.2fr}
+ .match-card.is-queued .score-secondary{grid-column:1/-1}
+}
