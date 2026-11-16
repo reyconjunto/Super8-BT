@@ -61,18 +61,32 @@
   open();
  };
  App.confirmGenerateKnockout=()=>{if(!ready())return;try{confirm();}catch(error){alert(error.message);}};
+ const isBye=m=>m.isBye||m.t1?.id==='BYE'||m.t2?.id==='BYE';
  const render=App.renderRounds;
  App.renderRounds=()=>{
   render();
-  (App.state.tournament?.rounds||[]).flatMap(r=>r.matches).filter(m=>m.isBye).forEach(m=>{
+  (App.state.tournament?.rounds||[]).flatMap(r=>r.matches).filter(isBye).forEach(m=>{
    const card=document.getElementById(m.id);if(!card)return;
    const pill=card.querySelector('.match-status-pill'),center=card.querySelector('.match-center-score');
-   if(pill)pill.textContent='Classificado por bye';
-   if(center)center.textContent='Avanço direto';
+   const round=App.state.tournament.rounds.find(r=>r.matches.includes(m));
+   const next=round.matches.length===4?'a semifinal':round.matches.length===2?'a final':round.matches.length===8?'as quartas de final':'a próxima fase';
+   card.classList.add('is-bye');
+   if(pill)pill.textContent='BYE · avanço direto';
+   if(center)center.textContent='Sem partida';
+   const note=document.createElement('p');note.className='bye-explanation';
+   note.textContent='Classificada diretamente para '+next+'. Não disputa jogo nesta fase e não precisa de resultado.';
+   card.append(note);
    card.querySelectorAll('.match-card-footer').forEach(el=>el.remove());
    card.querySelectorAll('button,select').forEach(el=>el.remove());
   });
+  document.querySelectorAll('.round-block').forEach(block=>{
+   const byes=block.querySelectorAll('.match-card.is-bye').length;
+   if(!byes)return;
+   const games=block.querySelectorAll('.match-card:not(.is-bye)').length;
+   const count=block.querySelector('.round-header > span');
+   if(count)count.textContent=games+' '+(games===1?'jogo':'jogos')+' · '+byes+' '+(byes===1?'bye':'byes');
+  });
  };
  const score=App.openScoreModal;
- App.openScoreModal=(id,r)=>{const m=App.state.tournament?.rounds.flatMap(r=>r.matches).find(m=>m.id===id);if(m?.isBye)return;score(id,r);};
+ App.openScoreModal=(id,r)=>{const m=App.state.tournament?.rounds.flatMap(r=>r.matches).find(m=>m.id===id);if(m&&isBye(m))return;score(id,r);};
 })(typeof window==='undefined'?globalThis:window);

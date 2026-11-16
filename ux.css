@@ -34,3 +34,12 @@
  .match-card.is-queued .match-card-footer{grid-template-columns:1fr 1.2fr}
  .match-card.is-queued .score-secondary{grid-column:1/-1}
 }
+
+/* Clear explanations for qualification and automatic advancement. */
+.ko-option-btn { height:auto; min-height:100px; white-space:normal; }
+.ko-option-btn span { display:block; line-height:1.45; }
+.ko-option-btn:disabled { opacity:.45; cursor:not-allowed; }
+.match-card.is-bye { border-color:rgba(255,183,0,.45); }
+.is-bye .match-status-pill { color:var(--sunset-yellow); background:rgba(255,183,0,.12); }
+.bye-explanation { margin:12px 16px 16px; line-height:1.5; font-size:.88rem; color:var(--sand-secondary); }
+@media(max-width:480px) { .ko-options-grid { grid-template-columns:1fr; } .ko-option-btn { min-height:76px; text-align:left; } }

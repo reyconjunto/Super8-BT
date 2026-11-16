@@ -20,7 +20,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css?v=3.3">
-<link rel="stylesheet" href="ux.css?v=20261116-1">
+<link rel="stylesheet" href="ux.css?v=20261116-2">
 </head>
 <body>
     <div class="background-overlay"></div>
@@ -405,27 +405,27 @@
                 </div>
                 <button type="button" class="modal-close-btn" id="btn-close-ko-modal" aria-label="Fechar">✕</button>
             </div>
-            <p class="modal-subtitle">Quantas duplas avançam da fase de grupos para o mata-mata? Os confrontos iniciais cruzam grupos diferentes. Com 6 duplas, as duas melhores classificadas avançam por bye à semifinal.</p>
+            <p class="modal-subtitle">Escolha quantas duplas avançam. Os primeiros confrontos cruzam grupos diferentes. Bye significa avançar automaticamente, sem disputar um jogo nesta fase.</p>
             <div class="ko-options-grid">
                 <button type="button" class="ko-option-btn" data-count="2">
                     <strong>2 Duplas</strong>
-                    <span>Final Direta</span>
+                    <span>Final direta · 1 jogo, sem bye.</span>
                 </button>
                 <button type="button" class="ko-option-btn selected" data-count="4">
                     <strong>4 Duplas</strong>
-                    <span>Semifinais</span>
+                    <span>Semifinais · 2 jogos; vencedores fazem a final. Sem bye.</span>
                 </button>
                 <button type="button" class="ko-option-btn" data-count="6">
                     <strong>6 Duplas</strong>
-                    <span>2 byes para as semifinais</span>
+                    <span>2 byes · as 2 melhores avançam à semifinal. As outras 4 disputam 2 jogos pelas vagas restantes.</span>
                 </button>
                 <button type="button" class="ko-option-btn" data-count="8">
                     <strong>8 Duplas</strong>
-                    <span>Quartas de Final</span>
+                    <span>Quartas · 4 jogos, depois semifinais e final. Sem bye.</span>
                 </button>
                 <button type="button" class="ko-option-btn" data-count="16">
                     <strong>16 Duplas</strong>
-                    <span>Oitavas de Final</span>
+                    <span>Oitavas · 8 jogos, depois quartas, semifinais e final. Sem bye.</span>
                 </button>
             </div>
             <div class="modal-actions mt-4">
@@ -555,6 +555,6 @@
 <script src="app.js?v=20261116-1"></script>
 <script src="feedback.js?v=20261116-2"></script>
 <script src="ux.js?v=20261116-2"></script>
-<script src="knockout-crossing.js?v=20261116-1"></script>
+<script src="knockout-crossing.js?v=20261116-2"></script>
 </body>
 </html>
