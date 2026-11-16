@@ -1,0 +1,4 @@
+pdf_reader/venv/
+check*.py
+find_brace.py
+test_*.js

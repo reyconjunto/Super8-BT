@@ -291,6 +291,14 @@
                 </div>
             </div>
         </section>
+
+        <!-- Footer global da aplicação -->
+        <footer class="app-global-footer" style="text-align: center; margin-top: 25px; padding-top: 15px; border-top: 1px solid var(--glass-border); font-size: 0.85rem; color: var(--sand-secondary);">
+            <p style="margin-bottom: 8px;">Rey Play Beach Tennis &copy; 2026</p>
+            <button id="btn-open-feedback-modal" class="btn btn-secondary btn-chip" type="button" style="border-color: rgba(244, 232, 209, 0.3); color: var(--sand-primary); font-size: 0.82rem; padding: 6px 14px; cursor: pointer;">
+                💡 Sugestões & Feedback
+            </button>
+        </footer>
         
     </div>
 
@@ -481,6 +489,66 @@
             </div>
         </div>
     </dialog>
+
+    <!-- Modal de Feedback & Sugestões -->
+    <dialog id="feedback-modal" class="app-modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div>
+                    <span class="modal-overline">SUGESTÕES & FEEDBACK</span>
+                    <h3 class="modal-title">💡 Fale Conosco</h3>
+                </div>
+                <button type="button" class="modal-close-btn" id="btn-close-feedback-modal" aria-label="Fechar">✕</button>
+            </div>
+
+            <p class="modal-subtitle" style="text-align: left; margin-bottom: 15px; font-size: 0.9rem;">
+                Tem alguma ideia de melhoria ou encontrou algum problema no app? Envie sua mensagem direta para a organização (<strong>rodrirey@gmail.com</strong>).
+            </p>
+
+            <form id="feedback-form" onsubmit="event.preventDefault(); App.sendFeedback();">
+                <div style="margin-bottom: 12px; text-align: left;">
+                    <label for="feedback-name-input" style="font-size: 0.85rem; font-weight: 600; color: var(--sunset-yellow); display: block; margin-bottom: 5px;">Seu Nome (opcional)</label>
+                    <input type="text" id="feedback-name-input" class="filter-select" placeholder="Ex: Rodrigo" style="width: 100%; padding: 10px 12px; font-size: 0.95rem; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); color: #fff; border-radius: 8px;">
+                </div>
+
+                <div style="margin-bottom: 12px; text-align: left;">
+                    <label for="feedback-contact-input" style="font-size: 0.85rem; font-weight: 600; color: var(--sunset-yellow); display: block; margin-bottom: 5px;">Seu E-mail ou WhatsApp (opcional)</label>
+                    <input type="text" id="feedback-contact-input" class="filter-select" placeholder="Ex: email@dominio.com ou (11) 99999-9999" style="width: 100%; padding: 10px 12px; font-size: 0.95rem; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); color: #fff; border-radius: 8px;">
+                </div>
+
+                <div style="margin-bottom: 15px; text-align: left;">
+                    <label for="feedback-message-input" style="font-size: 0.85rem; font-weight: 600; color: var(--sunset-yellow); display: block; margin-bottom: 5px;">Sua Sugestão / Mensagem *</label>
+                    <textarea id="feedback-message-input" required rows="4" class="filter-select" placeholder="Escreva aqui sua sugestão para o aplicativo..." style="width: 100%; padding: 10px 12px; font-size: 0.95rem; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); color: #fff; border-radius: 8px; resize: vertical; font-family: var(--font-body);"></textarea>
+                </div>
+
+                <p id="feedback-status-msg" style="display: none; font-size: 0.88rem; margin-bottom: 12px; font-weight: 600; text-align: center; line-height: 1.4;"></p>
+
+                <div class="modal-actions">
+                    <button type="submit" class="btn btn-primary" id="btn-send-feedback" style="width: 100%; padding: 12px; font-size: 1rem; font-weight: 700;">
+                        ✉️ Enviar Sugestão
+                    </button>
+                </div>
+            </form>
+        </div>
+    </dialog>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+    <!-- Logic Modules -->
+    <script src="logic/utils.js?v=3.3"></script>
+    <script src="logic/individual_mode.js?v=3.3"></script>
+    <script src="logic/fixed_doubles.js?v=3.3"></script>
+    <script src="logic/round_robin.js?v=3.3"></script>
+    <script src="logic/groups_mode.js?v=3.3"></script>
+    <script src="logic/knockout_mode.js?v=3.3"></script>
+    <script src="logic/teams_mode.js?v=3.3"></script>
+    <script src="logic/scoring.js?v=3.3"></script>
+    <!-- Main UI App -->
+    <script src="app.js?v=3.3"></script>
+</body>
+</html>
 
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>

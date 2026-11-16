@@ -313,6 +313,28 @@ const App = {
             });
         }
 
+        // Feedback / Suggestion Modal Controls
+        const btnOpenFeedback = document.getElementById('btn-open-feedback-modal');
+        if (btnOpenFeedback) {
+            btnOpenFeedback.addEventListener('click', App.openFeedbackModal);
+        }
+
+        const feedbackModal = document.getElementById('feedback-modal');
+        const btnCloseFeedback = document.getElementById('btn-close-feedback-modal');
+        if (btnCloseFeedback) {
+            btnCloseFeedback.addEventListener('click', App.closeFeedbackModal);
+        }
+        if (feedbackModal) {
+            feedbackModal.addEventListener('click', (e) => {
+                if (e.target === feedbackModal) App.closeFeedbackModal();
+            });
+        }
+
+        const feedbackForm = document.getElementById('feedback-form');
+        if (feedbackForm) {
+            feedbackForm.addEventListener('submit', App.sendFeedback);
+        }
+
         // Reset
         document.getElementById('btn-reset-tournament').addEventListener('click', () => {
             if (confirm("Tem certeza que deseja encerrar e limpar a sua tela?\n\nIsso não apaga o torneio da nuvem, apenas tira da sua visualização atual.")) {
@@ -2859,6 +2881,109 @@ const App = {
         } else {
             alert("Firebase não está conectado.");
         }
+    },
+
+    openFeedbackModal: () => {
+        const modal = document.getElementById('feedback-modal');
+        if (modal) {
+            const statusEl = document.getElementById('feedback-status-msg');
+            if (statusEl) {
+                statusEl.innerText = '';
+                statusEl.style.display = 'none';
+            }
+            try {
+                if (typeof modal.showModal === 'function') {
+                    if (!modal.open) modal.showModal();
+                } else {
+                    modal.setAttribute('open', 'true');
+                }
+            } catch (e) {
+                modal.setAttribute('open', 'true');
+            }
+        }
+    },
+
+    closeFeedbackModal: () => {
+        const modal = document.getElementById('feedback-modal');
+        if (modal) {
+            try {
+                if (typeof modal.close === 'function') {
+                    modal.close();
+                } else {
+                    modal.removeAttribute('open');
+                }
+            } catch (e) {
+                modal.removeAttribute('open');
+            }
+        }
+    },
+
+    sendFeedback: (e) => {
+        if (e && e.preventDefault) e.preventDefault();
+        const nameInp = document.getElementById('feedback-name-input');
+        const contactInp = document.getElementById('feedback-contact-input');
+        const msgInp = document.getElementById('feedback-message-input');
+        const btnSend = document.getElementById('btn-send-feedback');
+        const statusEl = document.getElementById('feedback-status-msg');
+
+        const name = nameInp ? nameInp.value.trim() : '';
+        const contact = contactInp ? contactInp.value.trim() : '';
+        const message = msgInp ? msgInp.value.trim() : '';
+
+        if (!message) {
+            if (statusEl) {
+                statusEl.innerText = '❌ Por favor, digite a sua mensagem ou sugestão.';
+                statusEl.style.color = '#ef4444';
+                statusEl.style.display = 'block';
+            }
+            return;
+        }
+
+        if (btnSend) btnSend.disabled = true;
+        if (statusEl) {
+            statusEl.innerText = '⏳ Enviando mensagem...';
+            statusEl.style.color = 'var(--sand-light)';
+            statusEl.style.display = 'block';
+        }
+
+        const payload = {
+            name: name || 'Anônimo',
+            contact: contact || 'Não informado',
+            message: message,
+            _subject: 'Super 8 BT - Nova Sugestão / Feedback'
+        };
+
+        fetch('https://formsubmit.co/ajax/rodrirey@gmail.com', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (btnSend) btnSend.disabled = false;
+            if (statusEl) {
+                statusEl.innerText = '✅ Obrigado! Sua mensagem foi enviada com sucesso.';
+                statusEl.style.color = '#10b981';
+            }
+            if (msgInp) msgInp.value = '';
+            if (nameInp) nameInp.value = '';
+            if (contactInp) contactInp.value = '';
+            setTimeout(() => App.closeFeedbackModal(), 2000);
+        })
+        .catch(err => {
+            console.error('Erro ao enviar feedback via AJAX, utilizando fallback mailto:', err);
+            if (btnSend) btnSend.disabled = false;
+            const body = encodeURIComponent(`Nome: ${name}\nContato: ${contact}\n\nMensagem:\n${message}`);
+            window.location.href = `mailto:rodrirey@gmail.com?subject=Super%208%20BT%20-%20Feedback&body=${body}`;
+            if (statusEl) {
+                statusEl.innerText = 'ℹ️ Abrindo seu leitor de e-mail para envio...';
+                statusEl.style.color = '#3b82f6';
+            }
+            setTimeout(() => App.closeFeedbackModal(), 2500);
+        });
     },
 };
 
