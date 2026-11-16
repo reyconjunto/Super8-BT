@@ -1,4 +1,13 @@
 (() => {
+ const home=document.querySelector('.ux-home');
+ if(home){
+  const access=document.createElement('button');
+  access.id='btn-home-master-admin';access.type='button';
+  access.className='btn btn-secondary';access.style.marginTop='16px';
+  access.textContent='👑 Painel Master';
+  access.onclick=()=>App.openMasterAdminModal();
+  home.append(access);
+ }
  const nameOf=t=>[t.tournamentName,t.tournament?.name,t.name].find(n=>typeof n==='string'&&n.trim())?.trim()||'';
  const render=App.renderMasterTournaments;
  App.renderMasterTournaments=()=>{
