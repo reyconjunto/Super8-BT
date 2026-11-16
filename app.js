@@ -2529,12 +2529,19 @@ const App = {
     openMasterAdminModal: () => {
         const modal = document.getElementById('master-admin-modal');
         if (modal) {
-            if (typeof modal.showModal === 'function') {
-                modal.showModal();
-            } else {
+            try {
+                if (typeof modal.showModal === 'function') {
+                    if (!modal.open) modal.showModal();
+                } else {
+                    modal.setAttribute('open', 'true');
+                }
+            } catch (e) {
+                console.error("Erro ao abrir modal:", e);
                 modal.setAttribute('open', 'true');
             }
             App.fetchMasterTournaments();
+        } else {
+            console.error("master-admin-modal não foi encontrado no DOM.");
         }
     },
 
