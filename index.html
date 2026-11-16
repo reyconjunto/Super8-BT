@@ -432,35 +432,52 @@
                 <button type="button" class="modal-close-btn" id="btn-close-master-modal" aria-label="Fechar">✕</button>
             </div>
 
-            <p class="modal-subtitle" style="margin-bottom: 1rem; text-align: left;">Pesquise, visualize e gerencie todos os torneios cadastrados no sistema.</p>
+            <!-- Seção de Autenticação (Senha Master) -->
+            <div id="master-auth-section" style="padding: 15px 5px; text-align: center;">
+                <p class="modal-subtitle" style="margin-bottom: 18px; text-align: center;">
+                    🔒 Este painel é restrito a administradores. Digite a senha master para continuar:
+                </p>
+                <form id="master-auth-form" onsubmit="event.preventDefault(); App.verifyMasterPassword();">
+                    <input type="password" id="master-password-input" autocomplete="current-password" class="filter-select" placeholder="Digite a senha master..." style="width: 100%; padding: 12px 14px; font-size: 1rem; border-radius: 10px; margin-bottom: 14px; background: rgba(0,0,0,0.4); color: #fff; border: 1px solid var(--glass-border); text-align: center;">
+                    <button type="submit" class="btn btn-primary" id="btn-submit-master-pass" style="width: 100%; padding: 12px; font-size: 1rem; font-weight: 700;">
+                        🔓 Entrar no Painel Master
+                    </button>
+                    <p id="master-pass-error" class="error-msg" style="margin-top: 12px; display: none; color: var(--sunset-orange); font-weight: 600; text-align: center;"></p>
+                </form>
+            </div>
 
-            <!-- Barra de Pesquisa e Filtros -->
-            <div class="master-search-bar">
-                <div style="position: relative; flex: 1; min-width: 200px;">
-                    <input type="text" id="master-search-input" class="filter-select" placeholder="🔍 Pesquisar por nome, ID ou formato..." style="width: 100%; padding: 10px 14px; font-size: 0.95rem; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); color: #fff; border-radius: 10px;">
+            <!-- Seção de Conteúdo Principal (Visível apenas após autenticação) -->
+            <div id="master-content-section" style="display: none;">
+                <p class="modal-subtitle" style="margin-bottom: 1rem; text-align: left;">Pesquise, visualize e gerencie todos os torneios cadastrados no sistema.</p>
+
+                <!-- Barra de Pesquisa e Filtros -->
+                <div class="master-search-bar">
+                    <div style="position: relative; flex: 1; min-width: 200px;">
+                        <input type="text" id="master-search-input" class="filter-select" placeholder="🔍 Pesquisar por nome, ID ou formato..." style="width: 100%; padding: 10px 14px; font-size: 0.95rem; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); color: #fff; border-radius: 10px;">
+                    </div>
+                    <select id="master-filter-format" class="filter-select" style="padding: 10px 12px; font-size: 0.88rem;">
+                        <option value="all">Todos os formatos</option>
+                        <option value="teams">🛡️ Equipes</option>
+                        <option value="fixed">👥 Duplas Fixas</option>
+                        <option value="individual">🏆 Individual</option>
+                        <option value="groups">📊 Grupos</option>
+                        <option value="knockout">⚔️ Mata-Mata</option>
+                    </select>
+                    <button type="button" class="btn btn-secondary btn-chip" id="btn-refresh-master-list" title="Atualizar lista do servidor">
+                        🔄
+                    </button>
                 </div>
-                <select id="master-filter-format" class="filter-select" style="padding: 10px 12px; font-size: 0.88rem;">
-                    <option value="all">Todos os formatos</option>
-                    <option value="teams">🛡️ Equipes</option>
-                    <option value="fixed">👥 Duplas Fixas</option>
-                    <option value="individual">🏆 Individual</option>
-                    <option value="groups">📊 Grupos</option>
-                    <option value="knockout">⚔️ Mata-Mata</option>
-                </select>
-                <button type="button" class="btn btn-secondary btn-chip" id="btn-refresh-master-list" title="Atualizar lista do servidor">
-                    🔄
-                </button>
-            </div>
 
-            <!-- Resumo e Status -->
-            <div id="master-summary-bar" style="margin: 12px 0 8px; font-size: 0.85rem; color: var(--sand-secondary); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-                <span id="master-count-label">Carregando torneios...</span>
-                <span id="master-status-indicator" style="color: var(--sunset-yellow); font-weight: 500;">🟢 Conectado ao Firebase</span>
-            </div>
+                <!-- Resumo e Status -->
+                <div id="master-summary-bar" style="margin: 12px 0 8px; font-size: 0.85rem; color: var(--sand-secondary); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <span id="master-count-label">Carregando torneios...</span>
+                    <span id="master-status-indicator" style="color: var(--sunset-yellow); font-weight: 500;">🟢 Conectado ao Firebase</span>
+                </div>
 
-            <!-- Container da Lista de Torneios -->
-            <div id="master-tournaments-list" class="master-tournaments-container">
-                <!-- Preenchido via JS -->
+                <!-- Container da Lista de Torneios -->
+                <div id="master-tournaments-list" class="master-tournaments-container">
+                    <!-- Preenchido via JS -->
+                </div>
             </div>
         </div>
     </dialog>

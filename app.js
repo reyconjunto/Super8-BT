@@ -305,6 +305,14 @@ const App = {
             btnRefreshMaster.addEventListener('click', App.fetchMasterTournaments);
         }
 
+        const masterAuthForm = document.getElementById('master-auth-form');
+        if (masterAuthForm) {
+            masterAuthForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                App.verifyMasterPassword();
+            });
+        }
+
         // Reset
         document.getElementById('btn-reset-tournament').addEventListener('click', () => {
             if (confirm("Tem certeza que deseja encerrar e limpar a sua tela?\n\nIsso não apaga o torneio da nuvem, apenas tira da sua visualização atual.")) {
@@ -2524,11 +2532,32 @@ const App = {
             .replace(/'/g, '&#039;');
     },
 
+    MASTER_PASSWORD: "OlelecranoBT",
+    isMasterAuthenticated: false,
     masterTournaments: [],
 
     openMasterAdminModal: () => {
         const modal = document.getElementById('master-admin-modal');
         if (modal) {
+            const authSec = document.getElementById('master-auth-section');
+            const contentSec = document.getElementById('master-content-section');
+            const errorLabel = document.getElementById('master-pass-error');
+            const passInput = document.getElementById('master-password-input');
+
+            if (App.isMasterAuthenticated) {
+                if (authSec) authSec.style.display = 'none';
+                if (contentSec) contentSec.style.display = 'block';
+                App.fetchMasterTournaments();
+            } else {
+                if (authSec) authSec.style.display = 'block';
+                if (contentSec) contentSec.style.display = 'none';
+                if (errorLabel) errorLabel.style.display = 'none';
+                if (passInput) {
+                    passInput.value = '';
+                    setTimeout(() => passInput.focus(), 150);
+                }
+            }
+
             try {
                 if (typeof modal.showModal === 'function') {
                     if (!modal.open) modal.showModal();
@@ -2539,9 +2568,34 @@ const App = {
                 console.error("Erro ao abrir modal:", e);
                 modal.setAttribute('open', 'true');
             }
-            App.fetchMasterTournaments();
         } else {
             console.error("master-admin-modal não foi encontrado no DOM.");
+        }
+    },
+
+    verifyMasterPassword: () => {
+        const passInput = document.getElementById('master-password-input');
+        const errorLabel = document.getElementById('master-pass-error');
+        const authSec = document.getElementById('master-auth-section');
+        const contentSec = document.getElementById('master-content-section');
+
+        const enteredPass = (passInput ? passInput.value : '').trim();
+
+        if (enteredPass === App.MASTER_PASSWORD) {
+            App.isMasterAuthenticated = true;
+            if (errorLabel) errorLabel.style.display = 'none';
+            if (authSec) authSec.style.display = 'none';
+            if (contentSec) contentSec.style.display = 'block';
+            App.fetchMasterTournaments();
+        } else {
+            if (errorLabel) {
+                errorLabel.innerText = "❌ Senha incorreta! Tente novamente.";
+                errorLabel.style.display = 'block';
+            }
+            if (passInput) {
+                passInput.value = '';
+                passInput.focus();
+            }
         }
     },
 
