@@ -1521,6 +1521,124 @@ p { font-size: 0.95rem; color: var(--sand-secondary); text-align: center; margin
     }
 }
 
+/* Header Layout with Master Button */
+.header-main-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 12px;
+}
+
+.master-btn {
+    border-color: var(--sunset-yellow) !important;
+    color: var(--sunset-yellow) !important;
+    font-weight: 600;
+    white-space: nowrap;
+    background: rgba(255, 184, 0, 0.1) !important;
+    transition: all 0.2s ease;
+    box-shadow: 0 0 10px rgba(255, 184, 0, 0.15);
+}
+
+.master-btn:hover {
+    background: rgba(255, 184, 0, 0.22) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 0 14px rgba(255, 184, 0, 0.3);
+}
+
+/* Master Admin Modal Styles */
+.master-modal-card {
+    max-width: 700px;
+    width: 95%;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.master-search-bar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.master-tournaments-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 52vh;
+    overflow-y: auto;
+    padding-right: 4px;
+    margin-top: 6px;
+}
+
+.master-tournament-card {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: all 0.2s ease;
+}
+
+.master-tournament-card:hover {
+    border-color: rgba(255, 184, 0, 0.4);
+    background: rgba(0, 0, 0, 0.35);
+}
+
+.master-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.master-card-title {
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+    line-height: 1.3;
+}
+
+.master-card-meta {
+    font-size: 0.8rem;
+    color: var(--sand-secondary);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.master-card-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    background: rgba(255, 184, 0, 0.15);
+    color: var(--sunset-yellow);
+    border: 1px solid rgba(255, 184, 0, 0.3);
+}
+
+.master-card-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 4px;
+    padding-top: 10px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.master-card-actions .btn {
+    padding: 6px 12px;
+    font-size: 0.82rem;
+}
+
 /* Print Styles */
 @media print {
     body, .app-container, .background-overlay, .screen, .tab-content {

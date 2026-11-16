@@ -30,7 +30,12 @@
             <div id="view-mode-banner" style="display: none; background: var(--sunset-orange); color: white; text-align: center; padding: 5px; font-weight: 600; border-radius: 8px; margin-bottom: 15px; font-size: 0.9rem;">
                 👀 MODO ESPECTADOR (Tempo Real)
             </div>
-            <img src="ReyPlay.png" alt="Rey Play" class="main-logo" />
+            <div class="header-main-row">
+                <img src="ReyPlay.png" alt="Rey Play" class="main-logo" />
+                <button id="btn-open-master-admin" class="btn btn-secondary btn-chip master-btn" type="button" title="Gerenciar todos os torneios do banco de dados">
+                    👑 Painel Master
+                </button>
+            </div>
         </header>
 
         <!-- SCREEN 1: Format Setup -->
@@ -378,6 +383,50 @@
         </div>
     </dialog>
 
+    <!-- Modal do Painel Admin Master (Pesquisa & Gestão de Torneios no Banco) -->
+    <dialog id="master-admin-modal" class="app-modal">
+        <div class="modal-card master-modal-card">
+            <div class="modal-header">
+                <div>
+                    <span class="modal-overline">BANCO DE DADOS FIREBASE</span>
+                    <h3 class="modal-title">👑 Painel Admin Master</h3>
+                </div>
+                <button type="button" class="modal-close-btn" id="btn-close-master-modal" aria-label="Fechar">✕</button>
+            </div>
+
+            <p class="modal-subtitle" style="margin-bottom: 1rem; text-align: left;">Pesquise, visualize e gerencie todos os torneios cadastrados no sistema.</p>
+
+            <!-- Barra de Pesquisa e Filtros -->
+            <div class="master-search-bar">
+                <div style="position: relative; flex: 1; min-width: 200px;">
+                    <input type="text" id="master-search-input" class="filter-select" placeholder="🔍 Pesquisar por nome, ID ou formato..." style="width: 100%; padding: 10px 14px; font-size: 0.95rem; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); color: #fff; border-radius: 10px;">
+                </div>
+                <select id="master-filter-format" class="filter-select" style="padding: 10px 12px; font-size: 0.88rem;">
+                    <option value="all">Todos os formatos</option>
+                    <option value="teams">🛡️ Equipes</option>
+                    <option value="fixed">👥 Duplas Fixas</option>
+                    <option value="individual">🏆 Individual</option>
+                    <option value="groups">📊 Grupos</option>
+                    <option value="knockout">⚔️ Mata-Mata</option>
+                </select>
+                <button type="button" class="btn btn-secondary btn-chip" id="btn-refresh-master-list" title="Atualizar lista do servidor">
+                    🔄
+                </button>
+            </div>
+
+            <!-- Resumo e Status -->
+            <div id="master-summary-bar" style="margin: 12px 0 8px; font-size: 0.85rem; color: var(--sand-secondary); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <span id="master-count-label">Carregando torneios...</span>
+                <span id="master-status-indicator" style="color: var(--sunset-yellow); font-weight: 500;">🟢 Conectado ao Firebase</span>
+            </div>
+
+            <!-- Container da Lista de Torneios -->
+            <div id="master-tournaments-list" class="master-tournaments-container">
+                <!-- Preenchido via JS -->
+            </div>
+        </div>
+    </dialog>
+
     <!-- Modal de Geração de Mata-Mata -->
     <dialog id="knockout-modal" class="app-modal">
         <div class="modal-card">
@@ -409,6 +458,50 @@
             </div>
             <div class="modal-actions mt-4">
                 <button type="button" class="btn btn-primary" id="btn-confirm-ko-modal">Gerar Chaves 🏆</button>
+            </div>
+        </div>
+    </dialog>
+
+    <!-- Modal do Painel Admin Master (Pesquisa & Gestão de Torneios no Banco) -->
+    <dialog id="master-admin-modal" class="app-modal">
+        <div class="modal-card master-modal-card">
+            <div class="modal-header">
+                <div>
+                    <span class="modal-overline">BANCO DE DADOS FIREBASE</span>
+                    <h3 class="modal-title">👑 Painel Admin Master</h3>
+                </div>
+                <button type="button" class="modal-close-btn" id="btn-close-master-modal" aria-label="Fechar">✕</button>
+            </div>
+
+            <p class="modal-subtitle" style="margin-bottom: 1rem; text-align: left;">Pesquise, visualize e gerencie todos os torneios cadastrados no sistema.</p>
+
+            <!-- Barra de Pesquisa e Filtros -->
+            <div class="master-search-bar">
+                <div style="position: relative; flex: 1; min-width: 200px;">
+                    <input type="text" id="master-search-input" class="filter-select" placeholder="🔍 Pesquisar por nome, ID ou formato..." style="width: 100%; padding: 10px 14px; font-size: 0.95rem; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); color: #fff; border-radius: 10px;">
+                </div>
+                <select id="master-filter-format" class="filter-select" style="padding: 10px 12px; font-size: 0.88rem;">
+                    <option value="all">Todos os formatos</option>
+                    <option value="teams">🛡️ Equipes</option>
+                    <option value="fixed">👥 Duplas Fixas</option>
+                    <option value="individual">🏆 Individual</option>
+                    <option value="groups">📊 Grupos</option>
+                    <option value="knockout">⚔️ Mata-Mata</option>
+                </select>
+                <button type="button" class="btn btn-secondary btn-chip" id="btn-refresh-master-list" title="Atualizar lista do servidor">
+                    🔄
+                </button>
+            </div>
+
+            <!-- Resumo e Status -->
+            <div id="master-summary-bar" style="margin: 12px 0 8px; font-size: 0.85rem; color: var(--sand-secondary); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <span id="master-count-label">Carregando torneios...</span>
+                <span id="master-status-indicator" style="color: var(--sunset-yellow); font-weight: 500;">🟢 Conectado ao Firebase</span>
+            </div>
+
+            <!-- Container da Lista de Torneios -->
+            <div id="master-tournaments-list" class="master-tournaments-container">
+                <!-- Preenchido via JS -->
             </div>
         </div>
     </dialog>

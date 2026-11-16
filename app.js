@@ -87,6 +87,12 @@ const App = {
                 console.error("Erro no localStorage:", e);
             }
 
+            App.saveToLocalTournamentsIndex(
+                App.state.tournamentId,
+                App.state.tournament?.name || App.state.tournamentName,
+                App.state.format
+            );
+
             if (db) {
                 // Remove propriedades 'undefined' que causam erro silencioso no Firebase
                 const cleanState = JSON.parse(JSON.stringify(App.state));
@@ -265,6 +271,38 @@ const App = {
         const btnConfirmKo = document.getElementById('btn-confirm-ko-modal');
         if (btnConfirmKo) {
             btnConfirmKo.addEventListener('click', App.confirmGenerateKnockout);
+        }
+
+        // Master Admin Modal Controls
+        const btnOpenMaster = document.getElementById('btn-open-master-admin');
+        if (btnOpenMaster) {
+            btnOpenMaster.addEventListener('click', App.openMasterAdminModal);
+        }
+
+        const masterModal = document.getElementById('master-admin-modal');
+        const btnCloseMaster = document.getElementById('btn-close-master-modal');
+        if (btnCloseMaster) {
+            btnCloseMaster.addEventListener('click', App.closeMasterAdminModal);
+        }
+        if (masterModal) {
+            masterModal.addEventListener('click', (e) => {
+                if (e.target === masterModal) App.closeMasterAdminModal();
+            });
+        }
+
+        const masterSearch = document.getElementById('master-search-input');
+        if (masterSearch) {
+            masterSearch.addEventListener('input', App.renderMasterTournaments);
+        }
+
+        const masterFilter = document.getElementById('master-filter-format');
+        if (masterFilter) {
+            masterFilter.addEventListener('change', App.renderMasterTournaments);
+        }
+
+        const btnRefreshMaster = document.getElementById('btn-refresh-master-list');
+        if (btnRefreshMaster) {
+            btnRefreshMaster.addEventListener('click', App.fetchMasterTournaments);
         }
 
         // Reset
@@ -2473,7 +2511,294 @@ const App = {
             alert('Não foi possível copiar automaticamente. Selecione e copie o texto abaixo:\n\n' + text);
             console.error(err);
         });
-    }
+    },
+
+    // --- PAINEL ADMIN MASTER & BUSCA DE TORNEIOS ---
+    escapeHtml: (str) => {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    },
+
+    masterTournaments: [],
+
+    openMasterAdminModal: () => {
+        const modal = document.getElementById('master-admin-modal');
+        if (modal) {
+            if (typeof modal.showModal === 'function') {
+                modal.showModal();
+            } else {
+                modal.setAttribute('open', 'true');
+            }
+            App.fetchMasterTournaments();
+        }
+    },
+
+    closeMasterAdminModal: () => {
+        const modal = document.getElementById('master-admin-modal');
+        if (modal) {
+            if (typeof modal.close === 'function') {
+                modal.close();
+            } else {
+                modal.removeAttribute('open');
+            }
+        }
+    },
+
+    fetchMasterTournaments: () => {
+        const listContainer = document.getElementById('master-tournaments-list');
+        const countLabel = document.getElementById('master-count-label');
+        const statusIndicator = document.getElementById('master-status-indicator');
+
+        if (listContainer) {
+            listContainer.innerHTML = '<div style="text-align: center; padding: 35px 20px; color: var(--sand-secondary);"><span style="font-size: 1.5rem; display: block; margin-bottom: 8px;">⏳</span> Carregando torneios do banco de dados...</div>';
+        }
+
+        if (!db) {
+            if (countLabel) countLabel.innerText = "Modo offline (Firebase não inicializado)";
+            if (statusIndicator) statusIndicator.innerText = "🔴 Offline";
+            App.masterTournaments = App.getLocalTournamentsIndex();
+            App.renderMasterTournaments();
+            return;
+        }
+
+        if (statusIndicator) statusIndicator.innerText = "🟡 Conectando ao Firebase...";
+
+        db.ref('tournaments').once('value')
+            .then((snapshot) => {
+                const data = snapshot.val();
+                let tournamentsList = [];
+
+                if (data && typeof data === 'object') {
+                    Object.keys(data).forEach(key => {
+                        const item = data[key];
+                        if (item && typeof item === 'object') {
+                            tournamentsList.push({
+                                id: key,
+                                ...item
+                            });
+                        }
+                    });
+                }
+
+                // Mescla com histórico local
+                const localSaved = App.getLocalTournamentsIndex();
+                localSaved.forEach(loc => {
+                    const locId = loc.id || loc.tournamentId;
+                    if (locId && !tournamentsList.some(t => (t.id === locId || t.tournamentId === locId))) {
+                        tournamentsList.push(loc);
+                    }
+                });
+
+                // Ordena mais recentes primeiro
+                tournamentsList.sort((a, b) => {
+                    const dateA = a.updatedAt || a.createdAt || 0;
+                    const dateB = b.updatedAt || b.createdAt || 0;
+                    return dateB - dateA;
+                });
+
+                App.masterTournaments = tournamentsList;
+
+                if (statusIndicator) statusIndicator.innerText = "🟢 Conectado ao Firebase";
+                App.renderMasterTournaments();
+            })
+            .catch((error) => {
+                console.error("Erro ao buscar torneios no Firebase:", error);
+                if (statusIndicator) statusIndicator.innerText = "⚠️ Exibindo histórico local";
+                
+                const localList = App.getLocalTournamentsIndex();
+                App.masterTournaments = localList;
+                App.renderMasterTournaments();
+            });
+    },
+
+    getLocalTournamentsIndex: () => {
+        try {
+            const raw = localStorage.getItem('super8bt_tournaments_index');
+            return raw ? JSON.parse(raw) : [];
+        } catch (e) {
+            return [];
+        }
+    },
+
+    saveToLocalTournamentsIndex: (tId, name, format) => {
+        if (!tId) return;
+        try {
+            let list = App.getLocalTournamentsIndex();
+            const existingIdx = list.findIndex(item => item.id === tId || item.tournamentId === tId);
+            const newItem = {
+                id: tId,
+                tournamentId: tId,
+                format: format || 'N/A',
+                tournamentName: name || ('Torneio ' + tId),
+                updatedAt: Date.now()
+            };
+            if (existingIdx >= 0) {
+                list[existingIdx] = newItem;
+            } else {
+                list.unshift(newItem);
+            }
+            localStorage.setItem('super8bt_tournaments_index', JSON.stringify(list));
+        } catch (e) {
+            console.error("Erro ao salvar índice local:", e);
+        }
+    },
+
+    renderMasterTournaments: () => {
+        const listContainer = document.getElementById('master-tournaments-list');
+        const countLabel = document.getElementById('master-count-label');
+        const searchVal = (document.getElementById('master-search-input')?.value || '').toLowerCase().trim();
+        const filterFmt = document.getElementById('master-filter-format')?.value || 'all';
+
+        if (!listContainer) return;
+
+        let items = App.masterTournaments || [];
+
+        // Aplica filtro por formato
+        if (filterFmt !== 'all') {
+            items = items.filter(t => (t.format || '').toLowerCase() === filterFmt.toLowerCase());
+        }
+
+        // Aplica pesquisa por Nome, ID ou Formato
+        if (searchVal) {
+            items = items.filter(t => {
+                const name = (t.tournament?.name || t.tournamentName || t.name || '').toLowerCase();
+                const id = (t.id || t.tournamentId || '').toLowerCase();
+                const fmt = (t.format || '').toLowerCase();
+                return name.includes(searchVal) || id.includes(searchVal) || fmt.includes(searchVal);
+            });
+        }
+
+        if (countLabel) {
+            countLabel.innerText = `${items.length} torneio(s) encontrado(s)`;
+        }
+
+        if (items.length === 0) {
+            listContainer.innerHTML = `
+                <div style="text-align: center; padding: 40px 20px; background: rgba(0,0,0,0.2); border-radius: 12px; border: 1px dashed var(--glass-border);">
+                    <p style="font-size: 1.1rem; color: var(--sunset-yellow); margin-bottom: 8px;">Nenhum torneio encontrado</p>
+                    <p style="font-size: 0.85rem; color: var(--sand-secondary); margin: 0;">Tente mudar os termos da pesquisa ou crie um novo torneio.</p>
+                </div>
+            `;
+            return;
+        }
+
+        const formatLabels = {
+            'individual': '🏆 Individual',
+            'fixed': '👥 Duplas Fixas',
+            'groups': '📊 Grupos',
+            'knockout': '⚔️ Mata-Mata',
+            'teams': '🛡️ Equipes'
+        };
+
+        let html = '';
+        items.forEach(t => {
+            const id = t.id || t.tournamentId;
+            const name = t.tournament?.name || t.tournamentName || t.name || `Torneio #${id}`;
+            const fmtKey = (t.format || 'individual').toLowerCase();
+            const fmtLabel = formatLabels[fmtKey] || t.format || 'Formato Padrão';
+            
+            let numPlayers = 0;
+            if (Array.isArray(t.players)) numPlayers = t.players.length;
+            else if (t.numPlayers) numPlayers = t.numPlayers;
+            
+            let numMatches = 0;
+            if (Array.isArray(t.rounds)) {
+                numMatches = t.rounds.reduce((acc, r) => acc + (Array.isArray(r.matches) ? r.matches.length : 0), 0);
+            }
+
+            const dateStr = t.updatedAt ? new Date(t.updatedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'Registrado';
+
+            html += `
+                <div class="master-tournament-card">
+                    <div class="master-card-header">
+                        <div>
+                            <h4 class="master-card-title">${App.escapeHtml(name)}</h4>
+                            <div class="master-card-meta mt-1">
+                                <span class="master-card-badge">${fmtLabel}</span>
+                                <span>👥 ${numPlayers} atletas/equipes</span>
+                                ${numMatches ? `<span>🎾 ${numMatches} jogos</span>` : ''}
+                                <span>📅 ${dateStr}</span>
+                            </div>
+                        </div>
+                        <span style="font-family: monospace; font-size: 0.72rem; color: var(--sand-secondary); background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px;">ID: ${App.escapeHtml(id)}</span>
+                    </div>
+
+                    <div class="master-card-actions">
+                        <button class="btn btn-primary btn-chip" onclick="App.openMasterAdminLink('${App.escapeHtml(id)}')">
+                            🔑 Gerenciar (Admin)
+                        </button>
+                        <button class="btn btn-secondary btn-chip" onclick="App.openMasterViewLink('${App.escapeHtml(id)}')">
+                            👁️ Espectador
+                        </button>
+                        <button class="btn btn-secondary btn-chip" onclick="App.copyMasterLinks('${App.escapeHtml(id)}')">
+                            📋 Copiar Links
+                        </button>
+                        <button class="btn btn-secondary btn-chip btn-danger-chip" onclick="App.deleteMasterTournament('${App.escapeHtml(id)}', '${App.escapeHtml(name)}')">
+                            🗑️ Excluir
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+
+        listContainer.innerHTML = html;
+    },
+
+    openMasterAdminLink: (id) => {
+        window.location.href = `?admin=${id}`;
+    },
+
+    openMasterViewLink: (id) => {
+        window.open(`?t=${id}`, '_blank');
+    },
+
+    copyMasterLinks: (id) => {
+        const baseUrl = window.location.origin + window.location.pathname;
+        const adminUrl = `${baseUrl}?admin=${id}`;
+        const viewUrl = `${baseUrl}?t=${id}`;
+        
+        const textToCopy = `🏆 Links do Torneio:\n\n🔑 Admin: ${adminUrl}\n👀 Espectador: ${viewUrl}`;
+        
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                alert("Links copiados para a área de transferência!");
+            }).catch(() => {
+                prompt("Copie os links abaixo:", textToCopy);
+            });
+        } else {
+            prompt("Copie os links abaixo:", textToCopy);
+        }
+    },
+
+    deleteMasterTournament: (id, name) => {
+        if (!confirm(`Deseja realmente EXCLUIR o torneio "${name}" (ID: ${id})?\n\nEsta ação apagará os dados do servidor e não poderá ser desfeita.`)) {
+            return;
+        }
+
+        if (db) {
+            db.ref('tournaments/' + id).remove()
+                .then(() => {
+                    alert("Torneio excluído com sucesso!");
+                    try {
+                        let list = App.getLocalTournamentsIndex();
+                        list = list.filter(item => item.id !== id && item.tournamentId !== id);
+                        localStorage.setItem('super8bt_tournaments_index', JSON.stringify(list));
+                    } catch(e) {}
+                    
+                    App.fetchMasterTournaments();
+                })
+                .catch((err) => {
+                    alert("Erro ao excluir do Firebase: " + err.message);
+                });
+        } else {
+            alert("Firebase não está conectado.");
+        }
+    },
 };
 
 document.addEventListener('DOMContentLoaded', () => {
