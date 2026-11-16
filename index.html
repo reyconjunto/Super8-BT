@@ -30,12 +30,7 @@
             <div id="view-mode-banner" style="display: none; background: var(--sunset-orange); color: white; text-align: center; padding: 5px; font-weight: 600; border-radius: 8px; margin-bottom: 15px; font-size: 0.9rem;">
                 👀 MODO ESPECTADOR (Tempo Real)
             </div>
-            <div class="header-main-row">
-                <img src="ReyPlay.png" alt="Rey Play" class="main-logo" />
-                <button id="btn-open-master-admin" class="btn btn-secondary btn-chip master-btn" type="button" title="Gerenciar todos os torneios do banco de dados">
-                    👑 Painel Master
-                </button>
-            </div>
+            <img src="ReyPlay.png" alt="Rey Play" class="main-logo" />
         </header>
 
         <!-- SCREEN 1: Format Setup -->
@@ -141,6 +136,14 @@
                         <li><strong>Eficiência (%):</strong> Porcentagem de games ganhos sobre o total de games disputados.</li>
                         <li><strong>Jogos Disputados:</strong> Desempate premiando quem jogou menos partidas.</li>
                     </ol>
+                </div>
+
+                <!-- Acesso Master / Buscar Torneios Existentes -->
+                <div class="mt-4" style="text-align: center; padding-top: 15px; border-top: 1px dashed rgba(255,255,255,0.1);">
+                    <button id="btn-open-master-admin" class="btn btn-secondary btn-chip master-btn-footer" type="button" style="width: 100%; padding: 14px 20px; font-size: 1rem; border-color: var(--sunset-yellow); color: var(--sunset-yellow); background: rgba(255, 184, 0, 0.1); border-radius: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s ease;">
+                        👑 Acessar Painel Master de Torneios
+                    </button>
+                    <p style="font-size: 0.82rem; color: var(--sand-secondary); margin-top: 8px; margin-bottom: 0;">Pesquise e gerencie torneios criados no banco de dados.</p>
                 </div>
             </div>
         </section>
