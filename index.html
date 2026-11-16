@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=3.2">
+    <link rel="stylesheet" href="styles.css?v=3.3">
 </head>
 <body>
     <div class="background-overlay"></div>
@@ -180,46 +180,81 @@
 
         <!-- SCREEN 4: Tournament Dashboard -->
         <section id="tournament-screen" class="screen">
-            <!-- Tabs Navigation -->
-            <div class="tournament-tabs">
-                <button class="tab active" data-target="tab-matches">Rodadas & Jogos</button>
-                <button class="tab" data-target="tab-ranking">Classificação</button>
+            <!-- Barra de Ações Administrativas Compacta -->
+            <div class="admin-toolbar">
+                <button class="btn btn-secondary btn-chip admin-only" id="btn-share-link" title="Compartilhar link de espectador em tempo real">🔗 Link Ao Vivo</button>
+                <button class="btn btn-secondary btn-chip admin-only" id="btn-share-admin-link" title="Copiar link de administração do torneio">🔑 Link Admin</button>
+                <button class="btn btn-primary btn-chip admin-only" id="btn-generate-knockout" style="display: none;">🏆 Gerar Mata-Mata</button>
+                <button class="btn btn-secondary btn-chip btn-danger-chip admin-only" id="btn-reset-tournament">🗑️ Encerrar</button>
             </div>
-            
-            <div id="teams-live-scoreboard" style="display: none; margin-bottom: 20px;">
+
+            <!-- KPIs de Progresso do Torneio -->
+            <div id="tournament-kpis" class="kpis-grid">
+                <!-- Preenchido via JS -->
+            </div>
+
+            <!-- Placar ao vivo de Equipes -->
+            <div id="teams-live-scoreboard" style="display: none; margin-bottom: 18px;">
                 <!-- Placar ao vivo de Equipes gerado via JS -->
             </div>
 
-            <div style="text-align: right; margin-bottom: 10px; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap;">
-                <button class="btn btn-secondary admin-only" id="btn-share-admin-link" style="width:auto; padding: 5px 15px; font-size: 0.85rem; border-color: #6c757d; color: #6c757d;" title="Copiar link de administração do torneio">🔗 Link Admin</button>
-                <button class="btn btn-secondary admin-only" id="btn-share-link" style="width:auto; padding: 5px 15px; font-size: 0.85rem; border-color: var(--sunset-orange); color: var(--sunset-orange);">🔗 Compartilhar Link</button>
-                <button class="btn btn-primary admin-only" id="btn-generate-knockout" style="display: none; width:auto; padding: 5px 15px; font-size: 0.85rem;">🏆 Gerar Mata-Mata</button>
-                <button class="btn btn-secondary admin-only" id="btn-reset-tournament" style="width:auto; padding: 5px 15px; font-size: 0.85rem;">🗑️ Encerrar Torneio</button>
+            <!-- Painel "Agora nas Quadras" -->
+            <div id="courts-dashboard" style="display: none; margin-bottom: 20px;">
+                <!-- Gerado via JS -->
+            </div>
+
+            <!-- Tabs Navigation -->
+            <div class="tournament-tabs">
+                <button class="tab active" data-target="tab-matches">Todos os Jogos</button>
+                <button class="tab" data-target="tab-ranking">Classificação</button>
             </div>
 
             <!-- Tab: Matches -->
             <div id="tab-matches" class="tab-content active">
-                <div style="text-align: right; margin-bottom: 10px;">
-                    <button class="btn btn-secondary" id="btn-export-whatsapp" style="width:auto; padding: 5px 15px; font-size: 0.85rem; border-color: #25D366; color: #25D366;">📲 Copiar p/ WhatsApp</button>
-                    <button class="btn btn-secondary btn-print" style="width:auto; padding: 5px 15px; font-size: 0.85rem; border-color: #ccc; color: #fff; margin-left: 5px;">🖨️ Imprimir</button>
+                <div class="matches-header-card glass-card">
+                    <div class="matches-header-top">
+                        <div>
+                            <h3 class="matches-section-title">Todos os jogos</h3>
+                            <p id="matches-summary-subtitle" class="matches-section-subtitle"></p>
+                        </div>
+                        <div class="matches-export-actions">
+                            <button class="btn btn-secondary btn-chip btn-whatsapp" id="btn-export-whatsapp">📲 WhatsApp</button>
+                            <button class="btn btn-secondary btn-chip btn-print">🖨️ Imprimir</button>
+                        </div>
+                    </div>
+
+                    <!-- Filtros Rápidos Mobile -->
+                    <div class="matches-filters-bar">
+                        <select id="filter-status" class="filter-select" aria-label="Filtrar por status">
+                            <option value="all">Todos os status</option>
+                            <option value="court">🎾 Em quadra</option>
+                            <option value="queue">⏳ Na fila</option>
+                            <option value="finished">✅ Concluídos</option>
+                        </select>
+                        <select id="filter-participant" class="filter-select" aria-label="Filtrar por dupla ou jogador">
+                            <option value="all">Todas as duplas / atletas</option>
+                        </select>
+                    </div>
                 </div>
+
                 <div id="individual-dummy-alert" style="display: none; background: rgba(0,0,0,0.2); padding: 10px 15px; border-radius: 8px; font-size: 0.85rem; color: var(--sand-secondary); margin-bottom: 15px; border-left: 3px solid var(--sunset-yellow);">
                     <strong style="color: var(--sunset-yellow);">🃏 Jogadores Curingas (Amistoso)</strong><br>
                     Para garantir que todos joguem a mesma quantidade de partidas, alguns jogadores podem atuar como "Curingas" para completar a quadra. Os placares marcados com o emoji 🃏 <strong>não somam e nem subtraem pontos</strong> para esses jogadores no ranking geral.
                 </div>
-                                <div id="rounds-container">
+
+                <div id="rounds-container">
                     <!-- Gerado via JS -->
                 </div>
             </div>
 
             <!-- Tab: Ranking -->
             <div id="tab-ranking" class="tab-content">
-                <div style="text-align: right; margin-bottom: 10px;">
-                    <button class="btn btn-secondary" id="btn-export-csv" style="width:auto; padding: 5px 15px; font-size: 0.85rem; border-color: var(--sunset-yellow); color: var(--sunset-yellow);">📊 Exportar Planilha</button>
-                    <button class="btn btn-secondary btn-print" style="width:auto; padding: 5px 15px; font-size: 0.85rem; border-color: #ccc; color: #fff; margin-left: 5px;">🖨️ Imprimir</button>
+                <div class="ranking-actions-bar">
+                    <button class="btn btn-secondary btn-chip" id="btn-export-csv" style="border-color: var(--sunset-yellow); color: var(--sunset-yellow);">📊 Exportar Planilha</button>
+                    <button class="btn btn-secondary btn-chip btn-print">🖨️ Imprimir</button>
                 </div>
                 <div id="ranking-container">
-                    <div class="glass-card pd-0">
+                    <div class="glass-card pd-0 table-responsive">
                         <table class="ranking-table">
                             <thead>
                                 <tr>
@@ -238,10 +273,9 @@
                     </div>
                 </div>
 
-
                 <!-- Resumo da Regra de Pontuação -->
                 <div class="mt-4" style="text-align: left; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; font-size: 0.85rem; color: var(--sand-secondary);">
-                    <p style="margin: 0; line-height: 1.5;">
+                    <p style="margin: 0; line-height: 1.5; text-align: left;">
                         <strong style="color: var(--sunset-yellow);">💡 Como funciona a classificação e desempate?</strong><br>
                         A classificação é definida primeiramente pelo número de <strong>Vitórias</strong>.<br>
                         <strong>Critérios de desempate sucessivos:</strong> 1º Maior Saldo de Games | 2º Melhor Aproveitamento de Games (%) | 3º Menos Jogos Disputados.
@@ -252,20 +286,147 @@
         
     </div>
 
+    <!-- Modal de Lançamento de Placar -->
+    <dialog id="score-modal" class="app-modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div>
+                    <span id="modal-match-badge" class="modal-overline">PARTIDA #01</span>
+                    <h3 class="modal-title">Lançar resultado</h3>
+                </div>
+                <button type="button" class="modal-close-btn" id="btn-close-score-modal" aria-label="Fechar">✕</button>
+            </div>
+
+            <p class="modal-subtitle">Toque nos botões ou digite os games de cada dupla.</p>
+
+            <div class="modal-score-grid">
+                <!-- Time / Dupla 1 -->
+                <div class="modal-team-box" id="modal-team1-box">
+                    <div id="modal-team1-overline" class="modal-team-overline"></div>
+                    <label for="modal-score1-input" id="modal-team1-name" class="modal-team-name">Dupla 1</label>
+                    <div class="score-stepper">
+                        <button type="button" class="stepper-btn" data-target="modal-score1-input" data-step="-1" aria-label="Diminuir placar">−</button>
+                        <input type="number" id="modal-score1-input" class="modal-score-input" min="0" max="99" inputmode="numeric" pattern="[0-9]*" value="0">
+                        <button type="button" class="stepper-btn" data-target="modal-score1-input" data-step="1" aria-label="Aumentar placar">+</button>
+                    </div>
+                    <div class="quick-score-pills" data-target="modal-score1-input">
+                        <button type="button" class="score-pill" data-val="0">0</button>
+                        <button type="button" class="score-pill" data-val="1">1</button>
+                        <button type="button" class="score-pill" data-val="2">2</button>
+                        <button type="button" class="score-pill" data-val="3">3</button>
+                        <button type="button" class="score-pill" data-val="4">4</button>
+                        <button type="button" class="score-pill" data-val="5">5</button>
+                        <button type="button" class="score-pill" data-val="6">6</button>
+                        <button type="button" class="score-pill" data-val="7">7</button>
+                    </div>
+                </div>
+
+                <!-- Time / Dupla 2 -->
+                <div class="modal-team-box" id="modal-team2-box">
+                    <div id="modal-team2-overline" class="modal-team-overline"></div>
+                    <label for="modal-score2-input" id="modal-team2-name" class="modal-team-name">Dupla 2</label>
+                    <div class="score-stepper">
+                        <button type="button" class="stepper-btn" data-target="modal-score2-input" data-step="-1" aria-label="Diminuir placar">−</button>
+                        <input type="number" id="modal-score2-input" class="modal-score-input" min="0" max="99" inputmode="numeric" pattern="[0-9]*" value="0">
+                        <button type="button" class="stepper-btn" data-target="modal-score2-input" data-step="1" aria-label="Aumentar placar">+</button>
+                    </div>
+                    <div class="quick-score-pills" data-target="modal-score2-input">
+                        <button type="button" class="score-pill" data-val="0">0</button>
+                        <button type="button" class="score-pill" data-val="1">1</button>
+                        <button type="button" class="score-pill" data-val="2">2</button>
+                        <button type="button" class="score-pill" data-val="3">3</button>
+                        <button type="button" class="score-pill" data-val="4">4</button>
+                        <button type="button" class="score-pill" data-val="5">5</button>
+                        <button type="button" class="score-pill" data-val="6">6</button>
+                        <button type="button" class="score-pill" data-val="7">7</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tie-break Section -->
+            <div class="modal-tb-toggle-row">
+                <button type="button" id="btn-toggle-tiebreak" class="btn-tb-toggle">+ Informar pontos de Tie-break (opcional)</button>
+            </div>
+
+            <div id="modal-tiebreak-section" class="modal-tiebreak-section hidden">
+                <div class="modal-tb-header">Tie-break · Pontos</div>
+                <div class="modal-tb-grid">
+                    <div class="modal-tb-col">
+                        <label for="modal-tb1-input" id="modal-tb1-label" class="modal-tb-label">Dupla 1</label>
+                        <div class="score-stepper score-stepper-sm">
+                            <button type="button" class="stepper-btn stepper-btn-sm" data-target="modal-tb1-input" data-step="-1">−</button>
+                            <input type="number" id="modal-tb1-input" class="modal-score-input modal-tb-input" min="0" max="99" inputmode="numeric" pattern="[0-9]*" placeholder="-">
+                            <button type="button" class="stepper-btn stepper-btn-sm" data-target="modal-tb1-input" data-step="1">+</button>
+                        </div>
+                    </div>
+                    <div class="modal-tb-col">
+                        <label for="modal-tb2-input" id="modal-tb2-label" class="modal-tb-label">Dupla 2</label>
+                        <div class="score-stepper score-stepper-sm">
+                            <button type="button" class="stepper-btn stepper-btn-sm" data-target="modal-tb2-input" data-step="-1">−</button>
+                            <input type="number" id="modal-tb2-input" class="modal-score-input modal-tb-input" min="0" max="99" inputmode="numeric" pattern="[0-9]*" placeholder="-">
+                            <button type="button" class="stepper-btn stepper-btn-sm" data-target="modal-tb2-input" data-step="1">+</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <p id="modal-score-error" class="error-msg" style="text-align: center; margin-top: 8px;"></p>
+
+            <div class="modal-actions">
+                <button type="button" class="btn btn-primary" id="btn-confirm-score-modal">Salvar resultado</button>
+            </div>
+        </div>
+    </dialog>
+
+    <!-- Modal de Geração de Mata-Mata -->
+    <dialog id="knockout-modal" class="app-modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div>
+                    <span class="modal-overline">FASE ELIMINATÓRIA</span>
+                    <h3 class="modal-title">Gerar Mata-Mata</h3>
+                </div>
+                <button type="button" class="modal-close-btn" id="btn-close-ko-modal" aria-label="Fechar">✕</button>
+            </div>
+            <p class="modal-subtitle">Quantas duplas avançam da fase de grupos para o mata-mata?</p>
+            <div class="ko-options-grid">
+                <button type="button" class="ko-option-btn" data-count="2">
+                    <strong>2 Duplas</strong>
+                    <span>Final Direta</span>
+                </button>
+                <button type="button" class="ko-option-btn selected" data-count="4">
+                    <strong>4 Duplas</strong>
+                    <span>Semifinais</span>
+                </button>
+                <button type="button" class="ko-option-btn" data-count="8">
+                    <strong>8 Duplas</strong>
+                    <span>Quartas de Final</span>
+                </button>
+                <button type="button" class="ko-option-btn" data-count="16">
+                    <strong>16 Duplas</strong>
+                    <span>Oitavas de Final</span>
+                </button>
+            </div>
+            <div class="modal-actions mt-4">
+                <button type="button" class="btn btn-primary" id="btn-confirm-ko-modal">Gerar Chaves 🏆</button>
+            </div>
+        </div>
+    </dialog>
+
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
     <!-- Logic Modules -->
-    <script src="logic/utils.js?v=3.2"></script>
-    <script src="logic/individual_mode.js?v=3.2"></script>
-    <script src="logic/fixed_doubles.js?v=3.2"></script>
-    <script src="logic/round_robin.js?v=3.2"></script>
-    <script src="logic/groups_mode.js?v=3.2"></script>
-    <script src="logic/knockout_mode.js?v=3.2"></script>
-    <script src="logic/teams_mode.js?v=3.2"></script>
-    <script src="logic/scoring.js?v=3.2"></script>
+    <script src="logic/utils.js?v=3.3"></script>
+    <script src="logic/individual_mode.js?v=3.3"></script>
+    <script src="logic/fixed_doubles.js?v=3.3"></script>
+    <script src="logic/round_robin.js?v=3.3"></script>
+    <script src="logic/groups_mode.js?v=3.3"></script>
+    <script src="logic/knockout_mode.js?v=3.3"></script>
+    <script src="logic/teams_mode.js?v=3.3"></script>
+    <script src="logic/scoring.js?v=3.3"></script>
     <!-- Main UI App -->
-    <script src="app.js?v=3.2"></script>
+    <script src="app.js?v=3.3"></script>
 </body>
 </html>

@@ -18,6 +18,11 @@ if (typeof firebase !== 'undefined') {
 // Main Application Logic
 const App = {
     isViewMode: false,
+    filterStatus: 'all',
+    filterParticipant: 'all',
+    activeModalMatchId: null,
+    activeModalRoundNum: null,
+    selectedKnockoutCount: 4,
     state: {
         players: [],
         format: null, // 'individual', 'fixed', 'groups', 'knockout', or 'teams'
@@ -99,20 +104,27 @@ const App = {
     },
 
     resumeTournament: () => {
-        if (App.state.format === 'individual') {
-            document.getElementById('rank-name-col').innerText = 'Jogador';
-        } else if (App.state.format === 'teams') {
-            document.getElementById('rank-name-col').innerText = 'Equipe';
-        } else {
-            document.getElementById('rank-name-col').innerText = 'Dupla';
+        const rankCol = document.getElementById('rank-name-col');
+        if (rankCol) {
+            if (App.state.format === 'individual') {
+                rankCol.innerText = 'Jogador';
+            } else if (App.state.format === 'teams') {
+                rankCol.innerText = 'Equipe';
+            } else {
+                rankCol.innerText = 'Dupla';
+            }
         }
         
         const btnKnockout = document.getElementById('btn-generate-knockout');
         if (btnKnockout) {
-            btnKnockout.style.display = (App.state.format === 'groups' && !App.isViewMode) ? 'inline-block' : 'none';
+            btnKnockout.style.display = (App.state.format === 'groups' && !App.isViewMode) ? 'inline-flex' : 'none';
         }
 
+        App.recalculateAllStats();
+        App.populateParticipantFilter();
+        App.renderKPIs();
         App.renderTeamsLiveScoreboard();
+        App.renderCourtsDashboard();
         App.renderRounds();
         App.renderRanking();
         App.switchScreen('tournament-screen');
@@ -152,8 +164,108 @@ const App = {
 
         // Tabs
         document.querySelectorAll('.tab').forEach(t => {
-            t.addEventListener('click', (e) => App.switchTab(e.target.dataset.target));
+            t.addEventListener('click', (e) => App.switchTab(e.currentTarget.dataset.target));
         });
+
+        // Filters
+        const filterStatus = document.getElementById('filter-status');
+        if (filterStatus) {
+            filterStatus.addEventListener('change', (e) => {
+                App.filterStatus = e.target.value;
+                App.renderRounds();
+            });
+        }
+        const filterPart = document.getElementById('filter-participant');
+        if (filterPart) {
+            filterPart.addEventListener('change', (e) => {
+                App.filterParticipant = e.target.value;
+                App.renderRounds();
+            });
+        }
+
+        // Score Modal Controls
+        const scoreModal = document.getElementById('score-modal');
+        const btnCloseScore = document.getElementById('btn-close-score-modal');
+        if (btnCloseScore) {
+            btnCloseScore.addEventListener('click', App.closeScoreModal);
+        }
+        if (scoreModal) {
+            scoreModal.addEventListener('click', (e) => {
+                if (e.target === scoreModal) App.closeScoreModal();
+            });
+        }
+
+        document.querySelectorAll('#score-modal .stepper-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const targetId = e.currentTarget.dataset.target;
+                const step = parseInt(e.currentTarget.dataset.step) || 0;
+                const inp = document.getElementById(targetId);
+                if (!inp) return;
+                let curr = parseInt(inp.value);
+                if (isNaN(curr)) curr = 0;
+                let next = Math.max(0, curr + step);
+                inp.value = next;
+                App.syncScoreModalUI();
+            });
+        });
+
+        document.querySelectorAll('#score-modal .score-pill').forEach(pill => {
+            pill.addEventListener('click', (e) => {
+                const parent = e.currentTarget.closest('.quick-score-pills');
+                if (!parent) return;
+                const targetId = parent.dataset.target;
+                const val = parseInt(e.currentTarget.dataset.val);
+                const inp = document.getElementById(targetId);
+                if (inp && !isNaN(val)) {
+                    inp.value = val;
+                    App.syncScoreModalUI();
+                }
+            });
+        });
+
+        const s1Inp = document.getElementById('modal-score1-input');
+        const s2Inp = document.getElementById('modal-score2-input');
+        if (s1Inp) s1Inp.addEventListener('input', App.syncScoreModalUI);
+        if (s2Inp) s2Inp.addEventListener('input', App.syncScoreModalUI);
+
+        const btnToggleTb = document.getElementById('btn-toggle-tiebreak');
+        if (btnToggleTb) {
+            btnToggleTb.addEventListener('click', () => {
+                const tbSec = document.getElementById('modal-tiebreak-section');
+                if (tbSec) {
+                    tbSec.classList.toggle('hidden');
+                    btnToggleTb.innerText = tbSec.classList.contains('hidden')
+                        ? '+ Informar pontos de Tie-break (opcional)'
+                        : '− Ocultar pontos de Tie-break';
+                }
+            });
+        }
+
+        const btnConfirmScore = document.getElementById('btn-confirm-score-modal');
+        if (btnConfirmScore) {
+            btnConfirmScore.addEventListener('click', App.saveModalScore);
+        }
+
+        // Knockout Modal Controls
+        const koModal = document.getElementById('knockout-modal');
+        const btnCloseKo = document.getElementById('btn-close-ko-modal');
+        if (btnCloseKo && koModal) {
+            btnCloseKo.addEventListener('click', () => koModal.close());
+            koModal.addEventListener('click', (e) => {
+                if (e.target === koModal) koModal.close();
+            });
+        }
+        document.querySelectorAll('.ko-option-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.ko-option-btn').forEach(b => b.classList.remove('selected'));
+                e.currentTarget.classList.add('selected');
+                App.selectedKnockoutCount = parseInt(e.currentTarget.dataset.count) || 4;
+            });
+        });
+        const btnConfirmKo = document.getElementById('btn-confirm-ko-modal');
+        if (btnConfirmKo) {
+            btnConfirmKo.addEventListener('click', App.confirmGenerateKnockout);
+        }
 
         // Reset
         document.getElementById('btn-reset-tournament').addEventListener('click', () => {
@@ -703,30 +815,38 @@ const App = {
         const thirdPlaceRadio = document.querySelector('input[name="third_place_mode"]:checked');
         App.state.hasThirdPlaceMatch = (thirdPlaceRadio && thirdPlaceRadio.value === 'match');
 
+        const rankCol = document.getElementById('rank-name-col');
         if (App.state.format === 'individual') {
             App.state.tournament = IndividualMode.generateRounds(App.state.players, App.state.numCourts, App.state.maxMatchesPerPlayer);
-            document.getElementById('rank-name-col').innerText = 'Jogador';
+            if (rankCol) rankCol.innerText = 'Jogador';
         } else if (App.state.format === 'teams') {
             App.state.tournament = TeamsMode.generateRounds(App.state.teams, App.state.numCourts);
-            document.getElementById('rank-name-col').innerText = 'Equipe';
+            if (rankCol) rankCol.innerText = 'Equipe';
         } else if (App.state.format === 'groups') {
             App.state.tournament = GroupsMode.generateRounds(App.state.fixedPairs, App.state.numGroups, App.state.numCourts);
-            document.getElementById('rank-name-col').innerText = 'Dupla';
+            if (rankCol) rankCol.innerText = 'Dupla';
         } else if (App.state.format === 'knockout') {
             App.state.tournament = KnockoutMode.generateInitialRound(App.state.fixedPairs);
-            document.getElementById('rank-name-col').innerText = 'Dupla';
+            if (rankCol) rankCol.innerText = 'Dupla';
         } else {
             App.state.tournament = RoundRobin.generateSubArrays(App.state.fixedPairs);
-            document.getElementById('rank-name-col').innerText = 'Dupla';
+            if (rankCol) rankCol.innerText = 'Dupla';
         }
 
-        // Controle manual via seletor
+        App.filterStatus = 'all';
+        App.filterParticipant = 'all';
+        const fStatus = document.getElementById('filter-status');
+        if (fStatus) fStatus.value = 'all';
+
         App.saveState();
         
         const newUrl = window.location.pathname + '?admin=' + App.state.tournamentId;
         window.history.pushState({path:newUrl}, '', newUrl);
 
+        App.populateParticipantFilter();
+        App.renderKPIs();
         App.renderTeamsLiveScoreboard();
+        App.renderCourtsDashboard();
         App.renderRounds();
         App.renderRanking();
         App.switchScreen('tournament-screen');
@@ -739,43 +859,59 @@ const App = {
         
         const btnKnockout = document.getElementById('btn-generate-knockout');
         if (btnKnockout) {
-            btnKnockout.style.display = (App.state.format === 'groups' && !App.isViewMode) ? 'inline-block' : 'none';
+            btnKnockout.style.display = (App.state.format === 'groups' && !App.isViewMode) ? 'inline-flex' : 'none';
         }
     },
 
     generateKnockout: () => {
-        let numStr = prompt("Quantas equipes se classificam para o mata-mata? (Ex: 2, 4, 8, 16)");
-        if (!numStr) return;
-        
-        let numTeams = parseInt(numStr);
-        if (isNaN(numTeams) || numTeams < 2) {
-            alert("Número inválido. O mínimo de equipes é 2.");
-            return;
+        const koModal = document.getElementById('knockout-modal');
+        if (koModal && typeof koModal.showModal === 'function') {
+            koModal.showModal();
+        } else {
+            let numStr = prompt("Quantas equipes se classificam para o mata-mata? (Ex: 2, 4, 8, 16)");
+            if (!numStr) return;
+            let numTeams = parseInt(numStr);
+            if (isNaN(numTeams) || numTeams < 2) {
+                alert("Número inválido. O mínimo de equipes é 2.");
+                return;
+            }
+            App.selectedKnockoutCount = numTeams;
+            App.confirmGenerateKnockout();
         }
+    },
 
+    confirmGenerateKnockout: () => {
+        const koModal = document.getElementById('knockout-modal');
+        if (koModal && koModal.open) koModal.close();
+
+        const numTeams = App.selectedKnockoutCount || 4;
         let statsArray = Object.values(App.state.stats);
         let koRound = GroupsMode.generateKnockout(statsArray, App.state.tournament.groups, numTeams);
         
-        // Atribuir um número de rodada sequencial
         koRound.roundNum = App.state.tournament.rounds.length + 1;
         
         App.state.tournament.rounds.push(koRound);
         App.saveState();
+        App.renderKPIs();
+        App.renderCourtsDashboard();
         App.renderRounds();
+        App.switchTab('tab-matches');
         
-        // Rolar até o fim para ver a nova rodada
-        document.getElementById('rounds-container').scrollIntoView({ behavior: 'smooth', block: 'end' });
+        setTimeout(() => {
+            const rc = document.getElementById('rounds-container');
+            if (rc) rc.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }, 100);
     },
 
     initStats: () => {
         App.state.stats = {};
         if (App.state.format === 'individual') {
-            App.state.players.forEach(p => {
+            (App.state.players || []).forEach(p => {
                 App.state.stats[p.id] = { obj: p, wins: 0, sg: 0, pro: 0, matches: 0 };
             });
         } else if (App.state.format === 'teams') {
             App.state.teamStats = {};
-            App.state.teams.forEach(t => {
+            (App.state.teams || []).forEach(t => {
                 App.state.teamStats[t.id] = {
                     team: t,
                     wins: 0,
@@ -785,7 +921,7 @@ const App = {
                     against: 0,
                     matches: 0
                 };
-                t.pairs.forEach(p => {
+                (t.pairs || []).forEach(p => {
                     App.state.stats[p.id] = {
                         obj: p,
                         team: t,
@@ -799,14 +935,216 @@ const App = {
                 });
             });
         } else {
-            App.state.fixedPairs.forEach(p => {
+            (App.state.fixedPairs || []).forEach(p => {
                 App.state.stats[p.id] = { obj: p, wins: 0, sg: 0, pro: 0, matches: 0 };
             });
         }
     },
 
-    renderCourtsDashboard: () => { return;
+    recalculateAllStats: () => {
+        if (!App.state.tournament || !App.state.tournament.rounds) return;
 
+        if (App.state.format === 'teams') {
+            const { teamStats, pairStats } = TeamsMode.calculateStats(App.state.teams || [], App.state.tournament.rounds);
+            App.state.teamStats = teamStats;
+            App.state.stats = pairStats;
+            return;
+        }
+
+        App.initStats();
+
+        App.state.tournament.rounds.forEach(round => {
+            (round.matches || []).forEach(match => {
+                if (match.finished && match.score1 !== null && match.score2 !== null) {
+                    const s1 = parseInt(match.score1);
+                    const s2 = parseInt(match.score2);
+                    if (isNaN(s1) || isNaN(s2)) return;
+
+                    const res = Scoring.calculateMatchScore(s1, s2);
+                    if (App.state.format === 'individual') {
+                        const dummies = match.dummies || [];
+                        if (!dummies.includes(match.t1[0].id)) App.addStatsToPlayer(match.t1[0].id, res.winsA, res.sgA, res.proA, 1);
+                        if (!dummies.includes(match.t1[1].id)) App.addStatsToPlayer(match.t1[1].id, res.winsA, res.sgA, res.proA, 1);
+                        if (!dummies.includes(match.t2[0].id)) App.addStatsToPlayer(match.t2[0].id, res.winsB, res.sgB, res.proB, 1);
+                        if (!dummies.includes(match.t2[1].id)) App.addStatsToPlayer(match.t2[1].id, res.winsB, res.sgB, res.proB, 1);
+                    } else {
+                        if (match.t1 && match.t1.id && match.t1.id !== 'BYE' && (!match.t2 || match.t2.id !== 'BYE')) {
+                            App.addStatsToPlayer(match.t1.id, res.winsA, res.sgA, res.proA, 1);
+                            App.addStatsToPlayer(match.t2.id, res.winsB, res.sgB, res.proB, 1);
+                        }
+                    }
+                }
+            });
+        });
+    },
+
+    getMatchDisplayInfo: (match, globalNum) => {
+        const numStr = globalNum < 10 ? `#0${globalNum}` : `#${globalNum}`;
+        let t1Overline = '';
+        let t1Color = 'var(--sunset-yellow)';
+        let t1Name = '';
+        let t2Overline = '';
+        let t2Color = 'var(--sunset-yellow)';
+        let t2Name = '';
+        let participantTokens = [];
+
+        if (App.state.format === 'individual') {
+            const dummies = match.dummies || [];
+            const p1 = dummies.includes(match.t1[0].id) ? `${match.t1[0].name} 🃏` : match.t1[0].name;
+            const p2 = dummies.includes(match.t1[1].id) ? `${match.t1[1].name} 🃏` : match.t1[1].name;
+            const p3 = dummies.includes(match.t2[0].id) ? `${match.t2[0].name} 🃏` : match.t2[0].name;
+            const p4 = dummies.includes(match.t2[1].id) ? `${match.t2[1].name} 🃏` : match.t2[1].name;
+            t1Name = `${p1} e ${p2}`;
+            t2Name = `${p3} e ${p4}`;
+            participantTokens = [match.t1[0].id, match.t1[1].id, match.t2[0].id, match.t2[1].id];
+        } else if (App.state.format === 'teams') {
+            t1Overline = match.team1Name || '';
+            t1Color = match.team1Color || 'var(--sunset-orange)';
+            t1Name = match.t1 ? match.t1.name : '';
+            t2Overline = match.team2Name || '';
+            t2Color = match.team2Color || 'var(--sunset-yellow)';
+            t2Name = match.t2 ? match.t2.name : '';
+            participantTokens = [
+                match.team1Id,
+                match.team2Id,
+                match.t1 ? match.t1.id : '',
+                match.t2 ? match.t2.id : ''
+            ].filter(Boolean);
+        } else {
+            t1Name = match.t1 ? match.t1.name : '';
+            t2Name = match.t2 ? match.t2.name : '';
+            if (match.groupName && !match.groupName.includes('Final') && !match.groupName.includes('Lugar')) {
+                t1Overline = match.groupName;
+                t2Overline = match.groupName;
+            }
+            participantTokens = [
+                match.t1 ? match.t1.id : '',
+                match.t2 ? match.t2.id : ''
+            ].filter(Boolean);
+        }
+
+        return {
+            numStr,
+            t1Overline,
+            t1Color,
+            t1Name,
+            t2Overline,
+            t2Color,
+            t2Name,
+            participantTokens
+        };
+    },
+
+    populateParticipantFilter: () => {
+        const select = document.getElementById('filter-participant');
+        if (!select) return;
+
+        const prevVal = App.filterParticipant || 'all';
+        let html = '';
+
+        if (App.state.format === 'individual') {
+            html += `<option value="all">Todos os atletas</option>`;
+            (App.state.players || []).forEach(p => {
+                html += `<option value="${p.id}">${p.name}</option>`;
+            });
+        } else if (App.state.format === 'teams') {
+            html += `<option value="all">Todas as equipes e duplas</option>`;
+            (App.state.teams || []).forEach(t => {
+                html += `<optgroup label="🛡️ ${t.name}">`;
+                html += `<option value="${t.id}">Todas de ${t.name}</option>`;
+                (t.pairs || []).forEach(pair => {
+                    html += `<option value="${pair.id}">${pair.name}</option>`;
+                });
+                html += `</optgroup>`;
+            });
+        } else {
+            html += `<option value="all">Todas as duplas</option>`;
+            (App.state.fixedPairs || []).forEach(pair => {
+                html += `<option value="${pair.id}">${pair.name}</option>`;
+            });
+        }
+
+        select.innerHTML = html;
+        if ([...select.options].some(o => o.value === prevVal)) {
+            select.value = prevVal;
+        } else {
+            select.value = 'all';
+            App.filterParticipant = 'all';
+        }
+    },
+
+    renderKPIs: () => {
+        const kpiContainer = document.getElementById('tournament-kpis');
+        const subtitleEl = document.getElementById('matches-summary-subtitle');
+        if (!kpiContainer || !App.state.tournament || !App.state.tournament.rounds) return;
+
+        const numCourts = App.state.numCourts || 0;
+        let total = 0;
+        let finished = 0;
+        let inCourt = 0;
+        let inQueue = 0;
+
+        App.state.tournament.rounds.forEach(r => {
+            (r.matches || []).forEach(m => {
+                total++;
+                if (m.finished) {
+                    finished++;
+                } else if (numCourts > 0 && m.court && m.court > 0 && m.court <= numCourts) {
+                    inCourt++;
+                } else {
+                    inQueue++;
+                }
+            });
+        });
+
+        const pct = total > 0 ? Math.round((finished / total) * 100) : 0;
+        const freeCourts = Math.max(0, numCourts - inCourt);
+
+        kpiContainer.innerHTML = `
+            <div class="kpi-card">
+                <div>
+                    <div class="kpi-label">Partidas Concluídas</div>
+                    <div class="kpi-value-row">
+                        <span class="kpi-value">${finished}</span>
+                        <span class="kpi-unit">/ ${total}</span>
+                    </div>
+                </div>
+                <div class="kpi-progress-track">
+                    <div class="kpi-progress-bar" style="width: ${pct}%;"></div>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div>
+                    <div class="kpi-label">Em Quadra</div>
+                    <div class="kpi-value-row">
+                        <span class="kpi-value">${numCourts > 0 ? inCourt : '-'}</span>
+                        <span class="kpi-unit">${numCourts > 0 ? (inCourt === 1 ? 'partida' : 'partidas') : ''}</span>
+                    </div>
+                </div>
+                <div class="kpi-subtext">
+                    ${numCourts > 0 ? `${freeCourts} ${freeCourts === 1 ? 'quadra livre' : 'quadras livres'}` : 'Sem controle de quadra'}
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div>
+                    <div class="kpi-label">Na Fila</div>
+                    <div class="kpi-value-row">
+                        <span class="kpi-value">${inQueue}</span>
+                        <span class="kpi-unit">${inQueue === 1 ? 'jogo' : 'jogos'}</span>
+                    </div>
+                </div>
+                <div class="kpi-subtext">
+                    ${inQueue === 0 && finished === total ? 'Torneio finalizado 🏆' : 'Sequência única de chamada'}
+                </div>
+            </div>
+        `;
+
+        if (subtitleEl) {
+            subtitleEl.innerText = `${total} confrontos no torneio · ${finished} concluídos e ${inQueue} na fila.`;
+        }
+    },
+
+    renderCourtsDashboard: () => {
         const container = document.getElementById('courts-dashboard');
         if (!container) return;
 
@@ -819,12 +1157,17 @@ const App = {
 
         container.style.display = 'block';
 
-        // Mapear partidas ocupando quadras atualmente
         let busyCourts = {};
         let waitingMatches = [];
+        let matchGlobalMap = {};
+        let matchRoundMap = {};
+        let gIdx = 0;
 
         App.state.tournament.rounds.forEach(round => {
             round.matches.forEach(m => {
+                gIdx++;
+                matchGlobalMap[m.id] = gIdx;
+                matchRoundMap[m.id] = round.roundNum;
                 if (!m.finished) {
                     if (m.court && m.court > 0 && m.court <= numCourts) {
                         busyCourts[m.court] = m;
@@ -837,82 +1180,96 @@ const App = {
 
         let courtsCardsHtml = '';
         for (let c = 1; c <= numCourts; c++) {
+            const courtLabel = c < 10 ? `QUADRA 0${c}` : `QUADRA ${c}`;
             const match = busyCourts[c];
             if (match) {
-                let p1 = match.t1.name;
-                let p2 = match.t2.name;
-                if (App.state.format === 'teams') {
-                    p1 = `[${match.team1Name}] ${match.t1.name}`;
-                    p2 = `[${match.team2Name}] ${match.t2.name}`;
-                }
+                const gNum = matchGlobalMap[match.id] || 1;
+                const rNum = matchRoundMap[match.id];
+                const info = App.getMatchDisplayInfo(match, gNum);
 
                 courtsCardsHtml += `
-                    <div class="court-card busy" style="background: rgba(255, 123, 0, 0.08); border: 1px solid var(--sunset-orange); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; text-align: left;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <span style="font-weight: 800; font-size: 0.95rem; color: var(--sunset-orange);">🎾 Quadra ${c}</span>
-                            <span style="font-size: 0.7rem; font-weight: 700; background: var(--sunset-orange); color: #fff; padding: 2px 6px; border-radius: 4px;">EM JOGO</span>
+                    <div class="court-card busy">
+                        <div>
+                            <div class="court-card-top">
+                                <span class="court-card-name">${courtLabel}</span>
+                                <span class="court-pill in-play">• Em jogo</span>
+                            </div>
+                            <div class="court-match-body">
+                                <div class="court-match-num">PARTIDA ${info.numStr}</div>
+                                <div class="court-match-teams">
+                                    <div class="court-team-col">
+                                        ${info.t1Overline ? `<span class="court-team-overline" style="color: ${info.t1Color};">${info.t1Overline}</span>` : ''}
+                                        <span class="court-team-pair">${info.t1Name}</span>
+                                    </div>
+                                    <span class="court-vs-divider">×</span>
+                                    <div class="court-team-col">
+                                        ${info.t2Overline ? `<span class="court-team-overline" style="color: ${info.t2Color};">${info.t2Overline}</span>` : ''}
+                                        <span class="court-team-pair">${info.t2Name}</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div style="font-size: 0.85rem; font-weight: 600; color: #fff; margin-bottom: 8px; line-height: 1.3;">
-                            ${p1} <span style="color: var(--sunset-yellow);">x</span> ${p2}
-                        </div>
-                        <div style="display: flex; gap: 6px; justify-content: flex-end;">
-                            <button class="btn-focus-match" data-mid="${match.id}" style="background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); color: var(--sand-primary); font-size: 0.75rem; padding: 4px 8px; border-radius: 4px; cursor: pointer;">⚡ Ver Jogo</button>
-                            ${!App.isViewMode ? `<button class="btn-release-court-card" data-mid="${match.id}" style="background: rgba(230, 57, 70, 0.2); border: 1px solid var(--sunset-red); color: #ff6b6b; font-size: 0.75rem; padding: 4px 8px; border-radius: 4px; cursor: pointer;" title="Liberar quadra">✕ Desocupar</button>` : ''}
+                        <div class="court-card-footer">
+                            ${!App.isViewMode ? `
+                                <button type="button" class="btn-court-secondary btn-release-court-card" data-mid="${match.id}">Devolver à fila</button>
+                                <button type="button" class="btn-court-primary btn-launch-court-score" data-mid="${match.id}" data-rn="${rNum}">Lançar resultado →</button>
+                            ` : `
+                                <button type="button" class="btn-court-secondary btn-focus-match" style="width: 100%;" data-mid="${match.id}">Ver na lista ↓</button>
+                            `}
                         </div>
                     </div>
                 `;
             } else {
-                // Quadra livre
-                let nextMatchBtnHtml = '';
-                if (waitingMatches.length > 0 && !App.isViewMode) {
-                    const nextM = waitingMatches[0];
-                    let nextP1 = nextM.t1.name;
-                    let nextP2 = nextM.t2.name;
-                    if (App.state.format === 'teams') {
-                        nextP1 = `[${nextM.team1Name}] ${nextM.t1.name}`;
-                        nextP2 = `[${nextM.team2Name}] ${nextM.t2.name}`;
-                    }
-
-                    nextMatchBtnHtml = `
-                        <button class="btn-call-next-court" data-court="${c}" style="background: linear-gradient(135deg, #00E676, #00B0FF); border: none; color: #000; font-weight: 700; font-size: 0.75rem; padding: 6px 10px; border-radius: 6px; cursor: pointer; width: 100%; margin-top: 6px;" title="Chamar próximo jogo para esta quadra">
-                            ➕ Chamar Próximo: ${nextP1} x ${nextP2}
-                        </button>
-                    `;
-                } else {
-                    nextMatchBtnHtml = `
-                        <div style="font-size: 0.75rem; color: var(--sand-secondary); margin-top: 4px;">Fila vazia</div>
-                    `;
+                const nextM = waitingMatches.length > 0 ? waitingMatches[0] : null;
+                let nextSubText = 'Nenhum jogo aguardando na fila';
+                if (nextM) {
+                    const nextGNum = matchGlobalMap[nextM.id] || 1;
+                    const nextInfo = App.getMatchDisplayInfo(nextM, nextGNum);
+                    nextSubText = `Próximo disponível: partida ${nextInfo.numStr} (${nextInfo.t1Name} × ${nextInfo.t2Name})`;
                 }
 
                 courtsCardsHtml += `
-                    <div class="court-card free" style="background: rgba(74, 222, 128, 0.05); border: 1px solid rgba(74, 222, 128, 0.4); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; text-align: left;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <span style="font-weight: 800; font-size: 0.95rem; color: #4ade80;">🟢 Quadra ${c}</span>
-                            <span style="font-size: 0.7rem; font-weight: 700; background: rgba(74, 222, 128, 0.2); color: #4ade80; padding: 2px 6px; border-radius: 4px;">LIVRE</span>
+                    <div class="court-card free">
+                        <div>
+                            <div class="court-card-top">
+                                <span class="court-card-name">${courtLabel}</span>
+                                <span class="court-pill available">Disponível</span>
+                            </div>
+                            <div class="court-empty-state">
+                                <div class="court-empty-icon">+</div>
+                                <div class="court-empty-title">Pronta para o próximo jogo</div>
+                                <div class="court-empty-sub">${nextSubText}</div>
+                            </div>
                         </div>
-                        ${nextMatchBtnHtml}
+                        <div class="court-card-footer">
+                            ${(!App.isViewMode && nextM) ? `
+                                <button type="button" class="btn-court-call btn-call-next-court" data-court="${c}">
+                                    Chamar próximo jogo →
+                                </button>
+                            ` : `
+                                <div style="width: 100%; text-align: center; font-size: 0.78rem; color: var(--sand-secondary);">
+                                    ${nextM ? 'Aguardando chamada da organização' : 'Quadra livre'}
+                                </div>
+                            `}
+                        </div>
                     </div>
                 `;
             }
         }
 
+        const anyBusy = Object.keys(busyCourts).length > 0;
+        const statusText = anyBusy ? 'Torneio em andamento' : (waitingMatches.length > 0 ? 'Pronto para chamar' : 'Jogos concluídos');
+
         container.innerHTML = `
-            <div class="glass-card" style="padding: 16px; border-radius: 14px; background: rgba(10, 25, 47, 0.85); border: 1px solid var(--glass-border);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
-                    <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--sunset-yellow);">
-                        🎾 Fila Dinâmica de Quadras (${numCourts} Quadras)
-                    </div>
-                    <div style="font-size: 0.8rem; color: var(--sand-secondary);">
-                        Aguardando na fila: <strong>${waitingMatches.length} jogos</strong>
-                    </div>
-                </div>
-                <div class="courts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px;">
-                    ${courtsCardsHtml}
-                </div>
+            <div class="courts-section-header">
+                <h3 class="courts-section-title">Agora nas quadras</h3>
+                <span class="courts-status-indicator">${statusText}</span>
+            </div>
+            <div class="courts-grid">
+                ${courtsCardsHtml}
             </div>
         `;
 
-        // Event listeners
         container.querySelectorAll('.btn-focus-match').forEach(btn => {
             btn.addEventListener('click', (e) => App.scrollToMatch(e.currentTarget.dataset.mid));
         });
@@ -922,12 +1279,16 @@ const App = {
         container.querySelectorAll('.btn-call-next-court').forEach(btn => {
             btn.addEventListener('click', (e) => App.callNextToCourt(parseInt(e.currentTarget.dataset.court)));
         });
+        container.querySelectorAll('.btn-launch-court-score').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                App.openScoreModal(e.currentTarget.dataset.mid, e.currentTarget.dataset.rn);
+            });
+        });
     },
 
     assignCourt: (matchId, courtNum) => {
         if (App.isViewMode || !App.state.tournament || !App.state.tournament.rounds) return;
 
-        // Se outra partida já estiver nesta quadra e não estiver finalizada, desocupa a anterior
         if (courtNum > 0) {
             App.state.tournament.rounds.forEach(r => {
                 r.matches.forEach(m => {
@@ -938,7 +1299,6 @@ const App = {
             });
         }
 
-        // Atribui à partida alvo
         let found = false;
         for (const r of App.state.tournament.rounds) {
             const m = r.matches.find(x => x.id === matchId);
@@ -951,6 +1311,7 @@ const App = {
 
         if (found) {
             App.saveState();
+            App.renderKPIs();
             App.renderCourtsDashboard();
             App.renderRounds();
         }
@@ -976,8 +1337,29 @@ const App = {
 
         if (nextMatch) {
             App.assignCourt(nextMatch.id, courtNum);
-            App.scrollToMatch(nextMatch.id);
         }
+    },
+
+    callMatchToFirstFreeCourt: (matchId) => {
+        if (App.isViewMode || !App.state.tournament || !App.state.tournament.rounds) return;
+        const numCourts = App.state.numCourts || 0;
+        if (numCourts <= 0) return;
+
+        let busy = new Set();
+        App.state.tournament.rounds.forEach(r => {
+            r.matches.forEach(m => {
+                if (!m.finished && m.court && m.court > 0) busy.add(m.court);
+            });
+        });
+
+        let targetCourt = 1;
+        for (let c = 1; c <= numCourts; c++) {
+            if (!busy.has(c)) {
+                targetCourt = c;
+                break;
+            }
+        }
+        App.assignCourt(matchId, targetCourt);
     },
 
     scrollToMatch: (matchId) => {
@@ -1020,34 +1402,34 @@ const App = {
             board.innerHTML = `
                 <div class="glass-card" style="padding: 18px; text-align: center; border-radius: 14px; background: rgba(10, 25, 47, 0.85); border: 1px solid var(--glass-border);">
                     <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--sunset-yellow); margin-bottom: 12px;">
-                        🛡️ Placar Geral das Equipes
+                        🛡️ Disputa entre Equipes (1 vitória = 1 ponto)
                     </div>
                     <div style="display: flex; justify-content: space-around; align-items: center; gap: 15px; flex-wrap: wrap;">
-                        <div style="flex: 1; min-width: 130px; text-align: center;">
-                            <div style="font-weight: 800; font-size: 1.15rem; color: ${tA.color}; margin-bottom: 6px;">
+                        <div style="flex: 1; min-width: 120px; text-align: center;">
+                            <div style="font-weight: 800; font-size: 1.1rem; color: ${tA.color}; margin-bottom: 6px;">
                                 ${tA.name}
                             </div>
-                            <div style="font-size: 2.8rem; font-weight: 800; color: #fff; line-height: 1; font-family: var(--font-heading);">
+                            <div style="font-size: 2.6rem; font-weight: 800; color: #fff; line-height: 1; font-family: var(--font-heading);">
                                 ${sA.wins}
                             </div>
-                            <div style="font-size: 0.8rem; color: var(--sand-secondary); margin-top: 6px;">
-                                Saldo: <strong style="color: ${sA.sg >= 0 ? 'var(--sunset-yellow)' : '#ff6b6b'};">${sA.sg > 0 ? '+' : ''}${sA.sg}</strong> (${sA.pro} pró)
+                            <div style="font-size: 0.78rem; color: var(--sand-secondary); margin-top: 6px;">
+                                ${sA.matches} jogos · Saldo <strong style="color: ${sA.sg >= 0 ? 'var(--sunset-yellow)' : '#ff6b6b'};">${sA.sg > 0 ? '+' : ''}${sA.sg}</strong>
                             </div>
                         </div>
 
-                        <div style="font-size: 1.6rem; font-weight: 800; color: var(--sunset-orange); padding: 0 10px;">
+                        <div style="font-size: 1.4rem; font-weight: 800; color: var(--sunset-orange); padding: 0 6px;">
                             VS
                         </div>
 
-                        <div style="flex: 1; min-width: 130px; text-align: center;">
-                            <div style="font-weight: 800; font-size: 1.15rem; color: ${tB.color}; margin-bottom: 6px;">
+                        <div style="flex: 1; min-width: 120px; text-align: center;">
+                            <div style="font-weight: 800; font-size: 1.1rem; color: ${tB.color}; margin-bottom: 6px;">
                                 ${tB.name}
                             </div>
-                            <div style="font-size: 2.8rem; font-weight: 800; color: #fff; line-height: 1; font-family: var(--font-heading);">
+                            <div style="font-size: 2.6rem; font-weight: 800; color: #fff; line-height: 1; font-family: var(--font-heading);">
                                 ${sB.wins}
                             </div>
-                            <div style="font-size: 0.8rem; color: var(--sand-secondary); margin-top: 6px;">
-                                Saldo: <strong style="color: ${sB.sg >= 0 ? 'var(--sunset-yellow)' : '#ff6b6b'};">${sB.sg > 0 ? '+' : ''}${sB.sg}</strong> (${sB.pro} pró)
+                            <div style="font-size: 0.78rem; color: var(--sand-secondary); margin-top: 6px;">
+                                ${sB.matches} jogos · Saldo <strong style="color: ${sB.sg >= 0 ? 'var(--sunset-yellow)' : '#ff6b6b'};">${sB.sg > 0 ? '+' : ''}${sB.sg}</strong>
                             </div>
                         </div>
                     </div>
@@ -1059,14 +1441,14 @@ const App = {
                 const t = ts.team;
                 return `
                     <div style="background: rgba(0,0,0,0.3); border: 1px solid ${t.color}; border-radius: 10px; padding: 12px; text-align: center;">
-                        <div style="font-size: 0.95rem; font-weight: 700; color: ${t.color}; margin-bottom: 4px;">
+                        <div style="font-size: 0.92rem; font-weight: 700; color: ${t.color}; margin-bottom: 4px;">
                             ${idx === 0 ? '🥇 ' : ''}${t.name}
                         </div>
-                        <div style="font-size: 2rem; font-weight: 800; color: #fff; line-height: 1;">
-                            ${ts.wins} <span style="font-size: 0.8rem; font-weight: 400; color: var(--sand-secondary);">Vitórias</span>
+                        <div style="font-size: 1.9rem; font-weight: 800; color: #fff; line-height: 1;">
+                            ${ts.wins} <span style="font-size: 0.78rem; font-weight: 500; color: var(--sand-secondary);">PTS</span>
                         </div>
                         <div style="font-size: 0.75rem; color: var(--sand-secondary); margin-top: 4px;">
-                            SG: ${ts.sg > 0 ? '+' : ''}${ts.sg} | ${ts.matches} jogos
+                            ${ts.matches} jogos · saldo ${ts.sg > 0 ? '+' : ''}${ts.sg}
                         </div>
                     </div>
                 `;
@@ -1075,9 +1457,9 @@ const App = {
             board.innerHTML = `
                 <div class="glass-card" style="padding: 16px; border-radius: 14px; background: rgba(10, 25, 47, 0.85); border: 1px solid var(--glass-border);">
                     <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--sunset-yellow); margin-bottom: 12px; text-align: center;">
-                        🛡️ Placar Geral das Equipes
+                        🛡️ Disputa entre Equipes
                     </div>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 10px;">
                         ${cardsHtml}
                     </div>
                 </div>
@@ -1087,25 +1469,12 @@ const App = {
 
     // --- MATCHES RENDER ---
     renderRounds: () => {
+        App.renderKPIs();
         App.renderTeamsLiveScoreboard();
         App.renderCourtsDashboard();
 
-        // Preservar valores digitados que ainda não foram salvos
-        if (App.state.tournament && App.state.tournament.rounds) {
-            document.querySelectorAll('.score-input:not(:disabled)').forEach(input => {
-                const mid = input.dataset.mid;
-                const team = input.dataset.team;
-                for (const r of App.state.tournament.rounds) {
-                    const m = r.matches.find(x => x.id === mid);
-                    if (m && !m.finished) {
-                        if (team === '1') m.score1 = input.value === '' ? null : parseInt(input.value);
-                        if (team === '2') m.score2 = input.value === '' ? null : parseInt(input.value);
-                    }
-                }
-            });
-        }
-
         const container = document.getElementById('rounds-container');
+        if (!container || !App.state.tournament || !App.state.tournament.rounds) return;
         container.innerHTML = '';
 
         const dummyAlert = document.getElementById('individual-dummy-alert');
@@ -1117,188 +1486,415 @@ const App = {
             dummyAlert.style.display = hasDummies ? 'block' : 'none';
         }
 
+        const numCourts = App.state.numCourts || 0;
+        let busyCourtsCount = 0;
+        App.state.tournament.rounds.forEach(r => {
+            r.matches.forEach(m => {
+                if (!m.finished && m.court && m.court > 0 && m.court <= numCourts) {
+                    busyCourtsCount++;
+                }
+            });
+        });
+        const hasFreeCourt = numCourts > 0 && busyCourtsCount < numCourts;
+
         let globalMatchIndex = 0;
+        let anyVisibleMatch = false;
+
         App.state.tournament.rounds.forEach(round => {
-            let matchesHtml = round.matches.map((match, mIndex) => {
-                let t1Name = '';
-                let t2Name = '';
-                
-                if (App.state.format === 'individual') {
-                    const dummies = match.dummies || [];
-                    let p1 = dummies.includes(match.t1[0].id) ? `${match.t1[0].name} 🃏` : match.t1[0].name;
-                    let p2 = dummies.includes(match.t1[1].id) ? `${match.t1[1].name} 🃏` : match.t1[1].name;
-                    let p3 = dummies.includes(match.t2[0].id) ? `${match.t2[0].name} 🃏` : match.t2[0].name;
-                    let p4 = dummies.includes(match.t2[1].id) ? `${match.t2[1].name} 🃏` : match.t2[1].name;
-                    t1Name = `${p1} & ${p2}`;
-                    t2Name = `${p3} & ${p4}`;
-                } else if (App.state.format === 'teams') {
-                    const c1 = match.team1Color || 'var(--sunset-orange)';
-                    const c2 = match.team2Color || 'var(--sunset-yellow)';
-                    t1Name = `<span style="display:inline-block; font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:10px; margin-right:6px; background:${c1}; color:#fff; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">${match.team1Name}</span> <span>${match.t1.name}</span>`;
-                    t2Name = `<span style="display:inline-block; font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:10px; margin-right:6px; background:${c2}; color:#fff; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">${match.team2Name}</span> <span>${match.t2.name}</span>`;
-                } else {
-                    t1Name = match.t1.name;
-                    t2Name = match.t2.name;
+            let roundMatchesHtml = [];
+
+            round.matches.forEach((match) => {
+                globalMatchIndex++;
+                const info = App.getMatchDisplayInfo(match, globalMatchIndex);
+
+                // Filtragem por status
+                const isInCourt = !match.finished && numCourts > 0 && match.court && match.court > 0;
+                const isQueue = !match.finished && !isInCourt;
+
+                if (App.filterStatus === 'finished' && !match.finished) return;
+                if (App.filterStatus === 'court' && !isInCourt) return;
+                if (App.filterStatus === 'queue' && !isQueue) return;
+
+                // Filtragem por participante/dupla/equipe
+                if (App.filterParticipant && App.filterParticipant !== 'all') {
+                    if (!info.participantTokens.includes(App.filterParticipant)) return;
                 }
 
-                globalMatchIndex++;
-                let isReadonly = App.isViewMode || match.finished ? 'disabled' : '';
-                let groupLabel = match.groupName ? `<div style="font-size:0.75rem; color:var(--sunset-yellow); margin-bottom:5px; font-weight:bold;">[${match.groupName}]</div>` : '';
+                anyVisibleMatch = true;
 
-                // Componente dinâmico de quadra
-                const numCourts = App.state.numCourts || 0;
-                let courtBadgeHtml = '';
-
-                if (numCourts === 0) {
-                    // Modo livre (sem controle de quadras)
-                    courtBadgeHtml = `<div style="font-size: 0.75rem; color: var(--sand-secondary); font-weight: 600;">#Jogo ${globalMatchIndex}</div>`;
+                let statusPillHtml = '';
+                if (match.finished) {
+                    const courtSuffix = (numCourts > 0 && match.court) ? ` · Q${match.court}` : '';
+                    statusPillHtml = `<span class="match-status-pill status-done">Concluído${courtSuffix}</span>`;
+                } else if (isInCourt) {
+                    statusPillHtml = `<span class="match-status-pill status-court">🎾 Quadra ${match.court}</span>`;
                 } else {
-                    // Seletor prático de quadra para o organizador
-                    if (match.finished) {
-                        const courtText = match.court ? `Quadra ${match.court}` : "Finalizado";
-                        courtBadgeHtml = `<div class="court-badge" style="justify-self: start; background: rgba(255,255,255,0.06); color: var(--sand-secondary); border-color: rgba(255,255,255,0.1); font-size: 0.75rem;">${courtText}</div>`;
-                    } else if (App.isViewMode) {
-                        if (match.court) {
-                            courtBadgeHtml = `<div class="court-badge" style="justify-self: start; background: rgba(74, 222, 128, 0.2); color: #4ade80; border-color: #4ade80; font-weight: 700; font-size: 0.8rem;">🎾 Quadra ${match.court}</div>`;
-                        } else {
-                            courtBadgeHtml = `<div class="court-badge" style="justify-self: start; background: rgba(255, 123, 0, 0.15); color: var(--sunset-orange); border-color: var(--sunset-orange); font-size: 0.75rem; font-weight: 600;">⏳ Na Fila</div>`;
-                        }
-                    } else {
-                        // Modo Admin: Seletor direto e prático no card
-                        let optionsHtml = `<option value="0" ${!match.court ? "selected" : ""}>⏳ Na Fila</option>`;
+                    statusPillHtml = `<span class="match-status-pill status-queue">Na fila</span>`;
+                }
+
+                const groupBadgeHtml = match.groupName
+                    ? `<span class="match-group-tag">${match.groupName}</span>`
+                    : '';
+
+                const s1 = match.score1 !== null && match.score1 !== undefined ? parseInt(match.score1) : null;
+                const s2 = match.score2 !== null && match.score2 !== undefined ? parseInt(match.score2) : null;
+                const t1Won = match.finished && s1 !== null && s2 !== null && s1 > s2;
+                const t2Won = match.finished && s1 !== null && s2 !== null && s2 > s1;
+
+                let centerHtml = '';
+                if (match.finished && s1 !== null && s2 !== null) {
+                    const hasTb = match.tb1 !== null && match.tb1 !== undefined && match.tb1 !== '' &&
+                                  match.tb2 !== null && match.tb2 !== undefined && match.tb2 !== '';
+                    centerHtml = `
+                        <div class="match-center-score">
+                            <div class="score-display-box">
+                                <span class="${t1Won ? 'score-winner' : ''}">${s1}</span>
+                                <span class="score-sep">×</span>
+                                <span class="${t2Won ? 'score-winner' : ''}">${s2}</span>
+                            </div>
+                            ${hasTb ? `<div class="tb-badge">TB ${match.tb1} × ${match.tb2}</div>` : ''}
+                        </div>
+                    `;
+                } else {
+                    centerHtml = `
+                        <div class="match-center-score">
+                            <div class="vs-badge">×</div>
+                        </div>
+                    `;
+                }
+
+                // Rodapé administrativo do card
+                let footerHtml = '';
+                if (!App.isViewMode) {
+                    let leftControlHtml = '';
+                    if (!match.finished && numCourts > 0) {
+                        let optionsHtml = `<option value="0" ${!match.court ? "selected" : ""}>⏳ Na fila</option>`;
                         for (let c = 1; c <= numCourts; c++) {
                             const isSel = match.court === c ? "selected" : "";
                             optionsHtml += `<option value="${c}" ${isSel}>🎾 Quadra ${c}</option>`;
                         }
-                        const isAssigned = !!match.court;
-                        const selectBg = isAssigned ? "rgba(74, 222, 128, 0.2)" : "rgba(255, 123, 0, 0.15)";
-                        const selectColor = isAssigned ? "#4ade80" : "var(--sunset-orange)";
-                        const selectBorder = isAssigned ? "#4ade80" : "rgba(255, 123, 0, 0.4)";
-
-                        courtBadgeHtml = `
-                            <select class="court-select-input" data-mid="${match.id}" style="background: ${selectBg}; color: ${selectColor}; border: 1px solid ${selectBorder}; border-radius: 8px; padding: 4px 8px; font-size: 0.78rem; font-weight: 700; cursor: pointer; outline: none;">
+                        leftControlHtml = `
+                            <select class="court-select-input ${match.court ? 'assigned' : ''}" data-mid="${match.id}" aria-label="Selecionar quadra">
                                 ${optionsHtml}
                             </select>
                         `;
+                    } else if (match.finished) {
+                        leftControlHtml = `<span style="font-size: 0.78rem; color: var(--sand-secondary);">Resultado registrado</span>`;
+                    } else {
+                        leftControlHtml = `<span style="font-size: 0.78rem; color: var(--sand-secondary);">Aguardando resultado</span>`;
                     }
+
+                    let rightActionsHtml = '';
+                    if (!match.finished) {
+                        if (numCourts > 0 && !match.court && hasFreeCourt) {
+                            rightActionsHtml += `
+                                <button type="button" class="btn-match-action btn-call-now" data-mid="${match.id}">
+                                    Chamar agora
+                                </button>
+                            `;
+                        }
+                        rightActionsHtml += `
+                            <button type="button" class="btn-match-action btn-launch-score" data-mid="${match.id}" data-rn="${round.roundNum}">
+                                Lançar resultado
+                            </button>
+                        `;
+                    } else {
+                        rightActionsHtml += `
+                            <button type="button" class="btn-match-action btn-correct-score" data-mid="${match.id}" data-rn="${round.roundNum}">
+                                Corrigir
+                            </button>
+                        `;
+                    }
+
+                    footerHtml = `
+                        <div class="match-card-footer">
+                            <div>${leftControlHtml}</div>
+                            <div class="match-footer-right">${rightActionsHtml}</div>
+                        </div>
+                    `;
                 }
 
-                return `
-                    <div class="match-card" id="${match.id}">
-                        ${groupLabel}
+                const cardStateClass = match.finished ? 'is-finished' : (isInCourt ? 'in-court' : '');
+
+                roundMatchesHtml.push(`
+                    <div class="match-card ${cardStateClass}" id="${match.id}">
+                        <div class="match-card-top">
+                            <div class="match-meta-left">
+                                <span class="match-num-badge">${info.numStr}</span>
+                                ${groupBadgeHtml}
+                            </div>
+                            ${statusPillHtml}
+                        </div>
+
                         <div class="match-teams">
-                            <div class="team"><span>${t1Name}</span></div>
-                            <div class="vs-badge">VS</div>
-                            <div class="team"><span>${t2Name}</span></div>
-                        </div>
-                        <div class="match-score" style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px;">
-                            <div style="justify-self: start;">${courtBadgeHtml}</div>
-                            <div style="display: flex; justify-content: center; align-items: center; gap: 10px;">
-                                <input type="number" min="0" class="score-input s-out" data-mid="${match.id}" data-team="1" ${isReadonly} value="${match.score1 !== null ? match.score1 : ''}">
-                                <span class="vs">X</span>
-                                <input type="number" min="0" class="score-input s-out" data-mid="${match.id}" data-team="2" ${isReadonly} value="${match.score2 !== null ? match.score2 : ''}">
+                            <div class="team ${t1Won ? 'is-winner' : ''}">
+                                ${info.t1Overline ? `<span class="team-overline" style="color: ${info.t1Color};">${info.t1Overline}</span>` : ''}
+                                <span class="team-pair-name">${info.t1Name}</span>
                             </div>
-                            <div style="justify-self: end;">
-                                ${!App.isViewMode && !match.finished ? `<button class="btn-save-match btn-primary" style="padding: 4px 16px; font-size: 0.85rem; font-weight: bold; border: none; border-radius: 6px; cursor: pointer;" data-mid="${match.id}" data-rn="${round.roundNum}">Salvar</button>` : ''}
-                                ${!App.isViewMode && match.finished ? `<button class="btn-edit-match btn-secondary" style="padding: 4px 16px; font-size: 0.85rem; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; background:rgba(255,255,255,0.1);" data-mid="${match.id}" data-rn="${round.roundNum}">✏️ Editar</button>` : ''}
+                            ${centerHtml}
+                            <div class="team ${t2Won ? 'is-winner' : ''}">
+                                ${info.t2Overline ? `<span class="team-overline" style="color: ${info.t2Color};">${info.t2Overline}</span>` : ''}
+                                <span class="team-pair-name">${info.t2Name}</span>
                             </div>
                         </div>
+
+                        ${footerHtml}
+                    </div>
+                `);
+            });
+
+            if (roundMatchesHtml.length > 0) {
+                let roundTitle = round.isKnockout ? `🏆 ${round.knockoutLabel}` : `Rodada ${round.roundNum}`;
+                container.innerHTML += `
+                    <div class="round-block">
+                        <div class="round-header">
+                            <h3>${roundTitle}</h3>
+                            <span style="font-size: 0.78rem; color: var(--sand-secondary);">${roundMatchesHtml.length} ${roundMatchesHtml.length === 1 ? 'jogo' : 'jogos'}</span>
+                        </div>
+                        ${roundMatchesHtml.join('')}
                     </div>
                 `;
-            }).join('');
+            }
+        });
 
-            let roundTitle = round.isKnockout ? `🏆 ${round.knockoutLabel}` : `Rodada ${round.roundNum}`;
-
-            container.innerHTML += `
-               <div class="round-block">
-                    <div class="round-header">
-                        <h3>${roundTitle}</h3>
-                    </div>
-                    ${matchesHtml}
-               </div> 
+        if (!anyVisibleMatch) {
+            container.innerHTML = `
+                <div class="glass-card" style="text-align: center; padding: 30px 20px; color: var(--sand-secondary);">
+                    Nenhum jogo encontrado para o filtro selecionado.
+                </div>
             `;
+        }
+
+        // Eventos dos cards
+        container.querySelectorAll('.btn-launch-score, .btn-correct-score').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                App.openScoreModal(e.currentTarget.dataset.mid, e.currentTarget.dataset.rn);
+            });
         });
 
-        document.querySelectorAll('.btn-save-match').forEach(btn => {
-            btn.addEventListener('click', (e) => App.finishMatch(e.target.dataset.mid, parseInt(e.target.dataset.rn)));
-        });
-        document.querySelectorAll('.btn-edit-match').forEach(btn => {
-            btn.addEventListener('click', (e) => App.editMatch(e.target.dataset.mid, parseInt(e.target.dataset.rn)));
+        container.querySelectorAll('.btn-call-now').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                App.callMatchToFirstFreeCourt(e.currentTarget.dataset.mid);
+            });
         });
 
-        document.querySelectorAll('.court-select-input').forEach(sel => {
+        container.querySelectorAll('.court-select-input').forEach(sel => {
             sel.addEventListener('change', (e) => {
                 const cVal = parseInt(e.target.value);
                 App.assignCourt(e.target.dataset.mid, (!isNaN(cVal) && cVal > 0) ? cVal : 0);
             });
         });
-
-        document.querySelectorAll('.btn-quick-release').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                App.releaseCourt(e.currentTarget.dataset.mid);
-            });
-        });
     },
 
-    finishMatch: (matchId, roundNum) => {
-        const round = App.state.tournament.rounds.find(r => r.roundNum === roundNum);
-        const match = round.matches.find(m => m.id === matchId);
-        
-        if (!match || match.finished) return;
+    // --- SCORE MODAL ---
+    openScoreModal: (matchId, roundNum) => {
+        if (App.isViewMode || !App.state.tournament || !App.state.tournament.rounds) return;
 
-        const input1 = document.querySelector(`.score-input[data-mid="${match.id}"][data-team="1"]`);
-        const input2 = document.querySelector(`.score-input[data-mid="${match.id}"][data-team="2"]`);
-        
-        const s1 = parseInt(input1.value);
-        const s2 = parseInt(input2.value);
+        let targetMatch = null;
+        let targetRound = null;
+        let globalNum = 0;
+        let foundGlobalNum = 1;
 
-        if (isNaN(s1) || isNaN(s2)) {
-            alert("Preencha os dois placares deste jogo.");
+        for (const r of App.state.tournament.rounds) {
+            for (const m of r.matches) {
+                globalNum++;
+                if (m.id === matchId) {
+                    targetMatch = m;
+                    targetRound = r;
+                    foundGlobalNum = globalNum;
+                    break;
+                }
+            }
+            if (targetMatch) break;
+        }
+
+        if (!targetMatch || !targetRound) return;
+
+        App.activeModalMatchId = matchId;
+        App.activeModalRoundNum = targetRound.roundNum;
+
+        const info = App.getMatchDisplayInfo(targetMatch, foundGlobalNum);
+
+        const badgeEl = document.getElementById('modal-match-badge');
+        if (badgeEl) {
+            const extra = targetMatch.groupName ? ` · ${targetMatch.groupName}` : ` · Rodada ${targetRound.roundNum}`;
+            badgeEl.innerText = `PARTIDA ${info.numStr}${extra}`;
+        }
+
+        const t1Over = document.getElementById('modal-team1-overline');
+        const t2Over = document.getElementById('modal-team2-overline');
+        if (t1Over) {
+            t1Over.innerText = info.t1Overline || '';
+            t1Over.style.color = info.t1Color;
+        }
+        if (t2Over) {
+            t2Over.innerText = info.t2Overline || '';
+            t2Over.style.color = info.t2Color;
+        }
+
+        const t1NameEl = document.getElementById('modal-team1-name');
+        const t2NameEl = document.getElementById('modal-team2-name');
+        if (t1NameEl) t1NameEl.innerText = info.t1Name;
+        if (t2NameEl) t2NameEl.innerText = info.t2Name;
+
+        const tb1Label = document.getElementById('modal-tb1-label');
+        const tb2Label = document.getElementById('modal-tb2-label');
+        if (tb1Label) tb1Label.innerText = info.t1Name;
+        if (tb2Label) tb2Label.innerText = info.t2Name;
+
+        const s1Inp = document.getElementById('modal-score1-input');
+        const s2Inp = document.getElementById('modal-score2-input');
+        if (s1Inp) s1Inp.value = (targetMatch.score1 !== null && targetMatch.score1 !== undefined) ? targetMatch.score1 : 0;
+        if (s2Inp) s2Inp.value = (targetMatch.score2 !== null && targetMatch.score2 !== undefined) ? targetMatch.score2 : 0;
+
+        const tb1Inp = document.getElementById('modal-tb1-input');
+        const tb2Inp = document.getElementById('modal-tb2-input');
+        const hasTb = targetMatch.tb1 !== null && targetMatch.tb1 !== undefined && targetMatch.tb1 !== '' &&
+                      targetMatch.tb2 !== null && targetMatch.tb2 !== undefined && targetMatch.tb2 !== '';
+        if (tb1Inp) tb1Inp.value = hasTb ? targetMatch.tb1 : '';
+        if (tb2Inp) tb2Inp.value = hasTb ? targetMatch.tb2 : '';
+
+        const tbSec = document.getElementById('modal-tiebreak-section');
+        const btnToggleTb = document.getElementById('btn-toggle-tiebreak');
+        if (tbSec && btnToggleTb) {
+            if (hasTb) {
+                tbSec.classList.remove('hidden');
+                btnToggleTb.innerText = '− Ocultar pontos de Tie-break';
+            } else {
+                tbSec.classList.add('hidden');
+                btnToggleTb.innerText = '+ Informar pontos de Tie-break (opcional)';
+            }
+        }
+
+        const errEl = document.getElementById('modal-score-error');
+        if (errEl) errEl.innerText = '';
+
+        App.syncScoreModalUI();
+
+        const modal = document.getElementById('score-modal');
+        if (modal && typeof modal.showModal === 'function') {
+            modal.showModal();
+        }
+    },
+
+    closeScoreModal: () => {
+        const modal = document.getElementById('score-modal');
+        if (modal && modal.open) {
+            modal.close();
+        }
+        App.activeModalMatchId = null;
+        App.activeModalRoundNum = null;
+    },
+
+    syncScoreModalUI: () => {
+        const s1Inp = document.getElementById('modal-score1-input');
+        const s2Inp = document.getElementById('modal-score2-input');
+        if (!s1Inp || !s2Inp) return;
+
+        const v1 = parseInt(s1Inp.value);
+        const v2 = parseInt(s2Inp.value);
+
+        const box1 = document.getElementById('modal-team1-box');
+        const box2 = document.getElementById('modal-team2-box');
+        if (box1 && box2) {
+            box1.classList.toggle('leading', !isNaN(v1) && !isNaN(v2) && v1 > v2);
+            box2.classList.toggle('leading', !isNaN(v1) && !isNaN(v2) && v2 > v1);
+        }
+
+        document.querySelectorAll('#score-modal .quick-score-pills').forEach(group => {
+            const targetId = group.dataset.target;
+            const targetInp = document.getElementById(targetId);
+            const curVal = targetInp ? parseInt(targetInp.value) : -1;
+            group.querySelectorAll('.score-pill').forEach(pill => {
+                pill.classList.toggle('active', parseInt(pill.dataset.val) === curVal);
+            });
+        });
+
+        // Auto-expandir seção de tie-break quando o placar for decidido por 1 game (ex: 4x3, 3x4, 7x6, 6x7)
+        if (!isNaN(v1) && !isNaN(v2) && Math.abs(v1 - v2) === 1 && Math.max(v1, v2) >= 4) {
+            const tbSec = document.getElementById('modal-tiebreak-section');
+            const btnToggleTb = document.getElementById('btn-toggle-tiebreak');
+            if (tbSec && tbSec.classList.contains('hidden')) {
+                tbSec.classList.remove('hidden');
+                if (btnToggleTb) btnToggleTb.innerText = '− Ocultar pontos de Tie-break';
+            }
+        }
+    },
+
+    saveModalScore: () => {
+        if (!App.activeModalMatchId) return;
+
+        const round = App.state.tournament.rounds.find(r => r.roundNum === App.activeModalRoundNum) ||
+                      App.state.tournament.rounds.find(r => r.matches.some(m => m.id === App.activeModalMatchId));
+        if (!round) return;
+
+        const match = round.matches.find(m => m.id === App.activeModalMatchId);
+        if (!match) return;
+
+        const s1Inp = document.getElementById('modal-score1-input');
+        const s2Inp = document.getElementById('modal-score2-input');
+        const errEl = document.getElementById('modal-score-error');
+
+        const s1 = parseInt(s1Inp.value);
+        const s2 = parseInt(s2Inp.value);
+
+        if (isNaN(s1) || isNaN(s2) || s1 < 0 || s2 < 0) {
+            if (errEl) errEl.innerText = 'Informe um placar válido para as duas duplas.';
             return;
         }
 
-        match.score1 = s1;
-        match.score2 = s2;
-        match.finished = true;
-        
-        const res = Scoring.calculateMatchScore(s1, s2);
-        
-        if (App.state.format === 'individual') {
-            const dummies = match.dummies || [];
-            if (!dummies.includes(match.t1[0].id)) App.addStatsToPlayer(match.t1[0].id, res.winsA, res.sgA, res.proA, 1);
-            if (!dummies.includes(match.t1[1].id)) App.addStatsToPlayer(match.t1[1].id, res.winsA, res.sgA, res.proA, 1);
-            if (!dummies.includes(match.t2[0].id)) App.addStatsToPlayer(match.t2[0].id, res.winsB, res.sgB, res.proB, 1);
-            if (!dummies.includes(match.t2[1].id)) App.addStatsToPlayer(match.t2[1].id, res.winsB, res.sgB, res.proB, 1);
-        } else if (App.state.format === 'teams') {
-            const { teamStats, pairStats } = TeamsMode.calculateStats(App.state.teams, App.state.tournament.rounds);
-            App.state.teamStats = teamStats;
-            App.state.stats = pairStats;
-        } else {
-            App.addStatsToPlayer(match.t1.id, res.winsA, res.sgA, res.proA, 1);
-            App.addStatsToPlayer(match.t2.id, res.winsB, res.sgB, res.proB, 1);
+        const tbSec = document.getElementById('modal-tiebreak-section');
+        const tb1Inp = document.getElementById('modal-tb1-input');
+        const tb2Inp = document.getElementById('modal-tb2-input');
+
+        let tb1 = null;
+        let tb2 = null;
+        if (tbSec && !tbSec.classList.contains('hidden') && tb1Inp && tb2Inp) {
+            const parsedTb1 = parseInt(tb1Inp.value);
+            const parsedTb2 = parseInt(tb2Inp.value);
+            if (!isNaN(parsedTb1) && !isNaN(parsedTb2)) {
+                tb1 = parsedTb1;
+                tb2 = parsedTb2;
+            }
         }
 
-        // Libera a quadra e chama automaticamente o próximo jogo da fila
-        // Controle manual via seletor
+        const wasAlreadyFinished = !!match.finished;
+
+        match.score1 = s1;
+        match.score2 = s2;
+        match.tb1 = tb1;
+        match.tb2 = tb2;
+        match.finished = true;
+
+        App.recalculateAllStats();
 
         const allFinished = round.matches.length > 0 && round.matches.every(m => m.finished);
+        const isLastRound = App.state.tournament.rounds[App.state.tournament.rounds.length - 1].roundNum === round.roundNum;
 
-        if (allFinished) {
+        if (!wasAlreadyFinished && allFinished && isLastRound) {
             if (round.isKnockout && round.matches.length > 1 && round.knockoutLabel !== 'Final') {
                 App.generateNextKnockoutPhase(round);
             }
         }
-        
+
+        App.closeScoreModal();
         App.saveState();
+        App.renderKPIs();
         App.renderTeamsLiveScoreboard();
+        App.renderCourtsDashboard();
         App.renderRounds();
         App.renderRanking();
-        
-        if (allFinished && round.isKnockout) {
+
+        if (!wasAlreadyFinished && allFinished && round.isKnockout) {
             setTimeout(() => {
-                document.getElementById('rounds-container').scrollIntoView({ behavior: 'smooth', block: 'end' });
+                const rc = document.getElementById('rounds-container');
+                if (rc) rc.scrollIntoView({ behavior: 'smooth', block: 'end' });
             }, 100);
         }
+    },
+
+    finishMatch: (matchId, roundNum) => {
+        App.openScoreModal(matchId, roundNum);
     },
 
     generateNextKnockoutPhase: (round) => {
@@ -1359,36 +1955,7 @@ const App = {
     },
 
     editMatch: (matchId, roundNum) => {
-        const round = App.state.tournament.rounds.find(r => r.roundNum === roundNum);
-        const match = round.matches.find(m => m.id === matchId);
-        
-        if(!match || !match.finished) return;
-        
-        // Subtrai os stats salvos anteriormente
-        const res = Scoring.calculateMatchScore(match.score1, match.score2);
-        
-        if (App.state.format === 'individual') {
-            const dummies = match.dummies || [];
-            if (!dummies.includes(match.t1[0].id)) App.addStatsToPlayer(match.t1[0].id, -res.winsA, -res.sgA, -res.proA, -1);
-            if (!dummies.includes(match.t1[1].id)) App.addStatsToPlayer(match.t1[1].id, -res.winsA, -res.sgA, -res.proA, -1);
-            if (!dummies.includes(match.t2[0].id)) App.addStatsToPlayer(match.t2[0].id, -res.winsB, -res.sgB, -res.proB, -1);
-            if (!dummies.includes(match.t2[1].id)) App.addStatsToPlayer(match.t2[1].id, -res.winsB, -res.sgB, -res.proB, -1);
-        } else if (App.state.format === 'teams') {
-            match.finished = false;
-            const { teamStats, pairStats } = TeamsMode.calculateStats(App.state.teams, App.state.tournament.rounds);
-            App.state.teamStats = teamStats;
-            App.state.stats = pairStats;
-        } else {
-            App.addStatsToPlayer(match.t1.id, -res.winsA, -res.sgA, -res.proA, -1);
-            App.addStatsToPlayer(match.t2.id, -res.winsB, -res.sgB, -res.proB, -1);
-        }
-        
-        match.finished = false;
-        
-        App.saveState();
-        App.renderTeamsLiveScoreboard();
-        App.renderRounds();
-        App.renderRanking();
+        App.openScoreModal(matchId, roundNum);
     },
 
     addStatsToPlayer: (id, wins, sg, pro, matches) => {
@@ -1442,7 +2009,7 @@ const App = {
                     }
 
                     container.innerHTML += `
-                        <div class="glass-card pd-0" style="margin-bottom: 25px;">
+                        <div class="glass-card pd-0 table-responsive" style="margin-bottom: 25px;">
                             <h3 style="color: var(--sunset-yellow); margin-top: 15px; margin-bottom: 10px; text-align:center; font-size: 1.5rem;">🏆 Pódio Final</h3>
                             <table class="ranking-table" style="margin-bottom: 15px;">
                                 <tbody>
@@ -1471,7 +2038,7 @@ const App = {
                 const third = sortedTeamStats.length > 2 ? sortedTeamStats[2] : null;
 
                 container.innerHTML += `
-                    <div class="glass-card pd-0" style="margin-bottom: 25px;">
+                    <div class="glass-card pd-0 table-responsive" style="margin-bottom: 25px;">
                         <h3 style="color: var(--sunset-yellow); margin-top: 15px; margin-bottom: 10px; text-align:center; font-size: 1.4rem;">🏆 Pódio das Equipes</h3>
                         <table class="ranking-table" style="margin-bottom: 15px;">
                             <tbody>
@@ -1529,7 +2096,7 @@ const App = {
 
             container.innerHTML += `
                 <h3 style="color: var(--sunset-yellow); margin-top: 10px; margin-bottom: 10px; text-align: left;">🛡️ Classificação das Equipes</h3>
-                <div class="glass-card pd-0" style="margin-bottom: 30px;">
+                <div class="glass-card pd-0 table-responsive" style="margin-bottom: 30px;">
                     <table class="ranking-table">
                         <thead>
                             <tr>
@@ -1580,7 +2147,7 @@ const App = {
 
             container.innerHTML += `
                 <h3 style="color: var(--sunset-yellow); margin-top: 20px; margin-bottom: 10px; text-align: left;">🎾 Desempenho das Duplas</h3>
-                <div class="glass-card pd-0">
+                <div class="glass-card pd-0 table-responsive">
                     <table class="ranking-table">
                         <thead>
                             <tr>
@@ -1631,7 +2198,7 @@ const App = {
                 
                 container.innerHTML += `
                     <h3 style="color: var(--sunset-yellow); margin-top: 20px; margin-bottom: 10px;">${group.name}</h3>
-                    <div class="glass-card pd-0">
+                    <div class="glass-card pd-0 table-responsive">
                         <table class="ranking-table">
                             <thead>
                                 <tr>
@@ -1674,7 +2241,7 @@ const App = {
             });
             
             container.innerHTML = `
-                <div class="glass-card pd-0">
+                <div class="glass-card pd-0 table-responsive">
                     <table class="ranking-table">
                         <thead>
                             <tr>
@@ -1751,6 +2318,8 @@ const App = {
 
         updateNameInObj(App.state);
         App.saveState();
+        App.populateParticipantFilter();
+        App.renderCourtsDashboard();
         App.renderRounds();
         App.renderRanking();
     },
@@ -1780,7 +2349,9 @@ const App = {
         }
 
         App.saveState();
+        App.populateParticipantFilter();
         App.renderTeamsLiveScoreboard();
+        App.renderCourtsDashboard();
         App.renderRounds();
         App.renderRanking();
     },
@@ -1854,7 +2425,7 @@ const App = {
         App.state.tournament.rounds.forEach(round => {
             text += `🏆 *Rodada ${round.roundNum}*\n`;
             
-            round.matches.forEach((match, mIndex) => {
+            round.matches.forEach((match) => {
                 let t1Name = '';
                 let t2Name = '';
                 
@@ -1876,8 +2447,10 @@ const App = {
 
                 let s1 = match.score1 !== null ? match.score1 : '-';
                 let s2 = match.score2 !== null ? match.score2 : '-';
+                let tbStr = (match.tb1 !== null && match.tb1 !== undefined && match.tb2 !== null && match.tb2 !== undefined)
+                    ? ` (TB ${match.tb1}x${match.tb2})`
+                    : '';
                 
-                // Marca quem venceu se o jogo tiver acabado (opcional, deixar negrito)
                 let t1Display = t1Name;
                 let t2Display = t2Name;
                 
@@ -1889,12 +2462,11 @@ const App = {
                     }
                 }
 
-                text += `${t1Display}  ${s1} x ${s2}  ${t2Display}\n`;
+                text += `${t1Display}  ${s1} x ${s2}${tbStr}  ${t2Display}\n`;
             });
             text += `\n`;
         });
 
-        // Tentar copiar para o clipboard
         navigator.clipboard.writeText(text).then(() => {
             alert('Resultados copiados! Cole no WhatsApp.');
         }).catch(err => {
